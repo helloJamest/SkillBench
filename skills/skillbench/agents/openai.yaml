@@ -1,0 +1,4 @@
+interface:
+  display_name: "SkillBench"
+  short_description: "Evaluate and evolve Codex skills."
+  default_prompt: "Use $skillbench to evaluate this skill and show the case-level report."

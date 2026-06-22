@@ -1,0 +1,212 @@
+# SkillBench
+
+SkillBench is an evaluation and evolution framework for Codex skills. It generates or loads eval cases, scores `SKILL.md` quality with a judge-compatible rubric, records every case, and can run a GEPA-style optimization loop over candidate skill documents.
+
+## What It Produces
+
+Each `skillbench evo` run produces:
+
+- An eval set describing which cases validate the skill document.
+- A report with dimension scores, worst-case analysis, attribution, and suggestions.
+- A local dashboard and optional Comet ML experiment artifacts for traceability.
+
+## Quick Start
+
+Install into a stable local runtime:
+
+```bash
+./scripts/install.sh
+```
+
+On Windows:
+
+```powershell
+.\scripts\install.ps1
+```
+
+```bash
+python -m skillbench eval ./skills/my-skill/SKILL.md --eval-set ./evals/basic.json
+python -m skillbench evo ./skills/my-skill/SKILL.md --rounds 3
+python -m skillbench dashboard .skillbench/runs/latest
+```
+
+When running from this plugin checkout, set `PYTHONPATH` to the runtime directory:
+
+```bash
+set PYTHONPATH=plugins\skillbench\runtime
+python -m skillbench eval plugins\skillbench\examples\skills\sample-skill\SKILL.md --eval-set plugins\skillbench\examples\eval_sets\basic-skill-eval.json
+```
+
+## Modes
+
+- `judge-only`: Static, low-cost evaluation of eval cases against the skill document.
+- `full-agent`: Runs a configured agent command, captures evidence, then judges the behavior.
+- `evo`: Runs select, execute, reflect, mutate, and accept over a candidate pool.
+
+In `full-agent` mode, command timeouts are recorded as case evidence instead of aborting the whole run. The case directory still contains `stdout.txt`, `stderr.txt`, `exit_code.txt`, and `files.json`; `exit_code.txt` is set to `timeout`.
+
+Set the full-agent timeout with `--agent-timeout <seconds>` on `eval`, `ci`, or `evo`, or with `SKILLBENCH_AGENT_TIMEOUT_SEC`.
+
+## Case Selection
+
+`eval`, `ci`, and `evo` can run a focused subset of an eval set:
+
+```powershell
+python -m skillbench eval `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --eval-set .skillbench\evals\sample-skill.json `
+  --include-tag safety
+```
+
+Available filters:
+
+- `--case-id <id>`: run a specific case; repeat for multiple cases.
+- `--include-tag <tag>`: keep cases with any included tag; repeat for OR matching.
+- `--exclude-tag <tag>`: skip cases with any excluded tag.
+- `--case-mode judge-only|full-agent`: keep cases declared with that mode.
+- `--limit <n>`: cap the selected set after filtering.
+
+The written `eval_set.json` records the applied selection metadata, so reports and dashboard artifacts are reproducible.
+
+## Generate Eval Cases
+
+```powershell
+$env:PYTHONPATH = "plugins\skillbench\runtime"
+
+python -m skillbench generate-cases `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --profile smoke `
+  --output .skillbench\evals\sample-skill.json
+```
+
+Generated eval sets include `profile`, `source_skill_hash`, generator metadata, case tags, and should-trigger / should-not-trigger / ambiguous / safety cases.
+
+Validate an eval set before using it in CI:
+
+```powershell
+python -m skillbench validate-cases `
+  .skillbench\evals\sample-skill.json `
+  --skill-path plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --require-hash-match `
+  --json
+```
+
+List case IDs, tags, modes, and dimensions before choosing a focused run:
+
+```powershell
+python -m skillbench list-cases `
+  .skillbench\evals\sample-skill.json `
+  --json
+```
+
+`list-cases` accepts the same selection filters as `eval`, `ci`, and `evo`, so you can preview a focused subset:
+
+```powershell
+python -m skillbench list-cases `
+  .skillbench\evals\sample-skill.json `
+  --include-tag safety
+```
+
+## Judge Backends
+
+The default backend is `local-heuristic` and requires no credentials:
+
+```powershell
+python -m skillbench eval `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --judge-backend local-heuristic
+```
+
+Use `custom-command` to plug in a JSON judge. The command receives JSON on stdin and must return JSON on stdout:
+
+```powershell
+python -m skillbench eval `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --eval-set .skillbench\evals\sample-skill.json `
+  --judge-backend custom-command `
+  --judge-command "python plugins\skillbench\examples\judges\fake_json_judge.py"
+```
+
+If a custom judge exits non-zero, times out, returns invalid JSON, or misses required fields, SkillBench records a score-0 case result with `evidence.judge_error` instead of aborting the whole run.
+
+## CI Gates
+
+```powershell
+python -m skillbench ci `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --eval-set .skillbench\evals\sample-skill.json `
+  --min-score 8.5 `
+  --min-safety 9.0 `
+  --json
+```
+
+Regression gates compare the current run to a baseline report or run directory:
+
+```powershell
+python -m skillbench ci `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --eval-set .skillbench\evals\sample-skill.json `
+  --baseline .skillbench\runs\baseline `
+  --fail-on-regression `
+  --max-regression 0.05 `
+  --junit .skillbench\reports\skillbench-junit.xml
+```
+
+For GitHub code scanning or other SARIF-compatible tooling, also write SARIF:
+
+```powershell
+python -m skillbench ci `
+  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --eval-set .skillbench\evals\sample-skill.json `
+  --min-score 8.5 `
+  --sarif .skillbench\reports\skillbench.sarif
+```
+
+CI writes `ci_result.json` in the run directory and exits non-zero on threshold or regression failures. Text-mode CI also writes `junit.xml` in the run directory by default; use `--junit` and `--sarif` to choose explicit artifact paths for CI uploads.
+
+Compare two reports or run directories and emit machine-readable JSON for scripts:
+
+```powershell
+python -m skillbench compare .skillbench\runs\baseline .skillbench\runs\candidate --json
+```
+
+`compare` also writes `comparison.json` next to the right-hand report.
+
+## Artifacts
+
+Every eval run writes:
+
+- `eval_set.json`
+- `report.json`
+- `case_results.jsonl`
+- `summary.md`
+- `judge/<case_id>.input.json`
+- `judge/<case_id>.output.json`
+- `agent_runs/<case_id>/...` for full-agent cases
+
+The dashboard reads these files directly and does not recompute scores.
+Case detail pages also render full-agent command, stdout, stderr, exit code, and produced file lists when `agent_runs/<case_id>/` artifacts exist.
+When a custom judge fails, the same page shows a dedicated `Judge Error` section with kind, return code, stdout, and stderr.
+
+Print a compact report for humans, or the persisted JSON for scripts:
+
+```powershell
+python -m skillbench report .skillbench\runs\latest
+python -m skillbench report .skillbench\runs\latest --json
+```
+
+Export the dashboard as static HTML for CI artifacts or sharing:
+
+```powershell
+python -m skillbench export-dashboard `
+  .skillbench\runs\latest `
+  --output .skillbench\dashboard-site
+```
+
+Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
+
+## Optional Integrations
+
+- Comet ML: install `comet_ml` and configure `COMET_API_KEY`, `COMET_WORKSPACE`, and `COMET_PROJECT_NAME`.
+- FastAPI dashboard: install `fastapi` and `uvicorn`.
+- GEPA: install a compatible GEPA package; otherwise SkillBench uses its local mutation policy.

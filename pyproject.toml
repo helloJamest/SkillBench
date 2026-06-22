@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skillbench"
+version = "0.1.0"
+description = "Evaluate and evolve Codex skills with eval cases, judge feedback, GEPA-style loops, and optional Comet tracking."
+requires-python = ">=3.10"
+authors = [{ name = "SkillBench Contributors" }]
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+comet = ["comet_ml>=3.45"]
+dashboard = ["fastapi>=0.110", "uvicorn>=0.27"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+skillbench = "skillbench.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "runtime"}
+
+[tool.setuptools.packages.find]
+where = ["runtime"]

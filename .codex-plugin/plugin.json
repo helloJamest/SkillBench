@@ -1,0 +1,40 @@
+{
+  "name": "skillbench",
+  "version": "0.1.0",
+  "description": "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, GEPA-style optimization, and optional Comet tracking.",
+  "author": {
+    "name": "SkillBench Contributors",
+    "email": "maintainers@example.com",
+    "url": "https://github.com/skillbench/skillbench"
+  },
+  "homepage": "https://github.com/skillbench/skillbench",
+  "repository": "https://github.com/skillbench/skillbench",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "skills",
+    "evaluation",
+    "gepa",
+    "comet"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SkillBench",
+    "shortDescription": "Evaluate and evolve Codex skills.",
+    "longDescription": "SkillBench scores skill documentation against eval cases, records judge evidence, compares versions, and can run a GEPA-style feedback loop to improve candidate skill documents.",
+    "developerName": "SkillBench Contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/skillbench/skillbench",
+    "defaultPrompt": [
+      "Evaluate this skill with SkillBench.",
+      "Run skillbench evo on this SKILL.md.",
+      "Compare these two skill versions."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
+
