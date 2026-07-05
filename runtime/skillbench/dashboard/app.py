@@ -3,13 +3,13 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from ..observability.logging_io import read_json, resolve_run_dir
 
 
 def render_dashboard_html(run_dir: str | Path) -> str:
-    requested_path = Path(run_dir)
+    requested_path, filters = _split_path_query(run_dir)
     route_case_id: str | None = None
     route_round_index: int | None = None
     route_artifact: Path | None = None
@@ -46,12 +46,12 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         if case:
             return _page(f"Case {html.escape(route_case_id)}", _case_html(case, run_path))
         return _page("Case not found", f"<p>No case named {html.escape(route_case_id)}.</p>")
-    return _render_report(run_path, report)
+    return _render_report(run_path, report, filters)
 
 
 def create_app(run_dir: str | Path):
     try:
-        from fastapi import FastAPI
+        from fastapi import FastAPI, Request
         from fastapi.responses import HTMLResponse, JSONResponse
     except Exception as exc:  # pragma: no cover - optional dependency
         raise RuntimeError("Install fastapi and uvicorn to use the dashboard command.") from exc
@@ -60,8 +60,9 @@ def create_app(run_dir: str | Path):
     app = FastAPI(title="SkillBench Dashboard")
 
     @app.get("/", response_class=HTMLResponse)
-    def index():
-        return render_dashboard_html(run_path)
+    def index(request: Request):
+        suffix = f"?{request.url.query}" if request.url.query else ""
+        return render_dashboard_html(f"{run_path}{suffix}")
 
     @app.get("/api/report")
     def api_report():
@@ -130,7 +131,10 @@ def serve(run_dir: str | Path, host: str = "127.0.0.1", port: int = 8765) -> Non
     uvicorn.run(create_app(run_dir), host=host, port=port)
 
 
-def _render_report(run_path: Path, report: dict) -> str:
+def _render_report(run_path: Path, report: dict, filters: dict[str, str] | None = None) -> str:
+    filters = filters or {}
+    all_cases = list(report.get("case_results", []))
+    filtered_cases = _filter_cases(all_cases, filters)
     dimensions = "".join(
         f"<tr><td>{html.escape(name)}</td><td>{score}</td></tr>"
         for name, score in sorted(report.get("dimension_scores", {}).items())
@@ -142,8 +146,11 @@ def _render_report(run_path: Path, report: dict) -> str:
         f"<td>{case.get('score')}</td>"
         f"<td>{html.escape(', '.join(case.get('failed_dimensions', [])))}</td>"
         "</tr>"
-        for case in report.get("case_results", [])
+        for case in filtered_cases
     )
+    if not cases:
+        cases = "<tr><td colspan=\"4\">No cases match the active filters.</td></tr>"
+    filters_html = _case_filters_html(all_cases, filters, len(filtered_cases))
     body = f"""
     <section class="summary">
       <h2>{html.escape(report.get('run_id', 'run'))}</h2>
@@ -155,12 +162,103 @@ def _render_report(run_path: Path, report: dict) -> str:
       <h2>Dimension Scores</h2>
       <table><tbody>{dimensions}</tbody></table>
     </section>
+    {filters_html}
     <section>
       <h2>Cases</h2>
       <table><thead><tr><th>Case</th><th>Type</th><th>Score</th><th>Failed Dimensions</th></tr></thead><tbody>{cases}</tbody></table>
     </section>
     """
     return _page("SkillBench Report", body)
+
+
+def _split_path_query(value: str | Path) -> tuple[Path, dict[str, str]]:
+    text = str(value)
+    if "?" not in text:
+        return Path(value), {}
+    path_text, query = text.split("?", 1)
+    parsed = parse_qs(query, keep_blank_values=True)
+    return Path(path_text), {key: values[-1] for key, values in parsed.items() if values}
+
+
+def _filter_cases(cases: list[dict], filters: dict[str, str]) -> list[dict]:
+    return [case for case in cases if _case_matches_filters(case, filters)]
+
+
+def _case_matches_filters(case: dict, filters: dict[str, str]) -> bool:
+    failed = filters.get("failed", "").lower() in {"1", "true", "yes", "on"}
+    if failed and not case.get("failed_dimensions"):
+        return False
+
+    dimension = filters.get("dimension", "").strip()
+    if dimension:
+        dimensions = set(case.get("dimension_scores", {}).keys()) | set(case.get("failed_dimensions", [])) | set((case.get("dimension_attributions") or {}).keys())
+        if dimension not in dimensions:
+            return False
+
+    case_type = filters.get("type", "").strip()
+    if case_type and case.get("type") != case_type:
+        return False
+
+    mode = filters.get("mode", "").strip()
+    if mode and case.get("mode") != mode:
+        return False
+
+    category = filters.get("category", "").strip()
+    if category and case.get("category") != category:
+        return False
+
+    query = filters.get("q", "").strip().lower()
+    if query:
+        haystack = " ".join(
+            [
+                str(case.get("case_id", "")),
+                str(case.get("type", "")),
+                str(case.get("mode", "")),
+                str(case.get("category", "")),
+                str(case.get("input", "")),
+                str(case.get("rationale", "")),
+                " ".join(str(item) for item in case.get("failed_dimensions", [])),
+            ]
+        ).lower()
+        if query not in haystack:
+            return False
+    return True
+
+
+def _case_filters_html(cases: list[dict], filters: dict[str, str], filtered_count: int) -> str:
+    dimensions = sorted({dimension for case in cases for dimension in case.get("dimension_scores", {}).keys()})
+    types = sorted({str(case.get("type", "")) for case in cases if case.get("type")})
+    modes = sorted({str(case.get("mode", "")) for case in cases if case.get("mode")})
+    categories = sorted({str(case.get("category", "")) for case in cases if case.get("category")})
+    failed_checked = " checked" if filters.get("failed", "").lower() in {"1", "true", "yes", "on"} else ""
+    return f"""
+    <section>
+      <h2>Case Filters</h2>
+      <form method="get" action="/">
+        <label>Search <input name="q" value="{_attr(filters.get('q', ''))}"></label>
+        <label>Dimension {_select_html("dimension", dimensions, filters.get("dimension", ""))}</label>
+        <label>Type {_select_html("type", types, filters.get("type", ""))}</label>
+        <label>Mode {_select_html("mode", modes, filters.get("mode", ""))}</label>
+        <label>Category {_select_html("category", categories, filters.get("category", ""))}</label>
+        <label><input type="checkbox" name="failed" value="1"{failed_checked}> Failed only</label>
+        <button type="submit">Apply</button>
+        <a href="/">Reset</a>
+      </form>
+      <p>Filtered Cases: {filtered_count} / {len(cases)}</p>
+    </section>
+    """
+
+
+def _select_html(name: str, options: list[str], selected: str) -> str:
+    body = [f'<option value="">All</option>']
+    for option in options:
+        marker = " selected" if option == selected else ""
+        body.append(f'<option value="{_attr(option)}"{marker}>{html.escape(option)}</option>')
+    return f'<select name="{_attr(name)}">{"".join(body)}</select>'
+
+
+def _attr(value: str) -> str:
+    return html.escape(str(value), quote=True)
 
 
 def _render_artifacts_index(run_path: Path) -> str:

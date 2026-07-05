@@ -257,6 +257,7 @@ The dashboard reads these files directly and does not recompute scores.
 Case detail pages also render full-agent command, stdout, stderr, exit code, and produced file lists when `agent_runs/<case_id>/` artifacts exist.
 When a custom judge fails, the same page shows a dedicated `Judge Error` section with kind, return code, stdout, and stderr.
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
+The report page also includes case filters. You can combine query parameters such as `?failed=1&dimension=safety&type=safety&q=approval` to focus the case table while preserving the run summary.
 
 Print a compact report for humans, or the persisted JSON for scripts:
 

@@ -21,5 +21,6 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.3.0 shipped first-class runner adapter metadata for `custom-command`, `codex-cli`, and `claude-cli` while keeping explicit command execution.
 - v0.3.0 shipped normalized `agent_audit.json` with transcripts, touched files, command logs, status, and elapsed time.
 - v0.3.1 shipped raw artifact browsing in the dashboard and static dashboard export.
-- Strengthen dashboard filtering, run comparison, and evolution timelines.
 - v0.3.2 shipped a GitHub Actions PR comment workflow example for SkillBench CI summaries.
+- v0.3.3 shipped dashboard case filtering by query, failed-only, dimension, type, mode, and category.
+- Strengthen run comparison and evolution timelines.

@@ -312,6 +312,61 @@ def test_dashboard_renders_report(tmp_path):
     assert "should-trigger-eval" in html
 
 
+def test_dashboard_filters_failed_cases_by_dimension_query(tmp_path):
+    fake = tmp_path / "filter_judge.py"
+    fake.write_text(
+        "import json, sys\n"
+        "payload=json.load(sys.stdin)\n"
+        "case_id=payload['case']['id']\n"
+        "if case_id == 'fail-safety':\n"
+        "    json.dump({'case_id': case_id, 'score': 4, 'dimension_scores': {'safety': 4}, "
+        "'rationale': 'unsafe', 'suggestion': 'fix safety', 'evidence_refs': []}, sys.stdout)\n"
+        "else:\n"
+        "    json.dump({'case_id': case_id, 'score': 9, 'dimension_scores': {'trigger_clarity': 9}, "
+        "'rationale': 'clear', 'suggestion': 'keep', 'evidence_refs': []}, sys.stdout)\n",
+        encoding="utf-8",
+    )
+    eval_set = EvalSet(
+        id="dashboard-filter-eval",
+        cases=[
+            EvalCase(id="pass-trigger", input="clear routing", type="should-trigger", dimensions=["trigger_clarity"]),
+            EvalCase(id="fail-safety", input="approval safety boundary", type="safety", dimensions=["safety"]),
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "dashboard-filter-eval.json")
+    config = SkillBenchConfig(output_root=tmp_path / "runs", judge_backend="custom-command", judge_command=f'"{sys.executable}" "{fake}"')
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=eval_set_path, output_dir=tmp_path / "runs", config=config)
+    run_dir = Path(report.artifacts["report_json"]).parent
+
+    html = render_dashboard_html(f"{run_dir}?failed=1&dimension=safety")
+
+    assert "Case Filters" in html
+    assert "Filtered Cases: 1 / 2" in html
+    assert "fail-safety" in html
+    assert "pass-trigger" not in html
+
+
+def test_dashboard_filters_cases_by_type_and_search_query(tmp_path):
+    eval_set = EvalSet(
+        id="dashboard-search-filter-eval",
+        cases=[
+            EvalCase(id="trigger-case", input="generic trigger routing", type="should-trigger", dimensions=["trigger_clarity"]),
+            EvalCase(id="safety-approval-case", input="approval safety boundary", type="safety", dimensions=["safety"]),
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "dashboard-search-filter-eval.json")
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=eval_set_path, output_dir=tmp_path / "runs")
+    run_dir = Path(report.artifacts["report_json"]).parent
+
+    html = render_dashboard_html(f"{run_dir}?type=safety&q=approval")
+
+    assert "Filtered Cases: 1 / 2" in html
+    assert "safety-approval-case" in html
+    assert 'href="/cases/trigger-case"' not in html
+    assert 'name="q"' in html
+    assert 'value="approval"' in html
+
+
 def test_dashboard_artifact_index_lists_run_artifacts(tmp_path):
     report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
     run_dir = Path(report.artifacts["report_json"]).parent
