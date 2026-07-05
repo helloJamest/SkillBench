@@ -12,7 +12,7 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 ## v0.2.x: Evaluation Trust
 
 - v0.2.0 shipped eval cases with difficulty, category, golden behavior, anti-patterns, and rubric notes.
-- Add judge calibration metrics for multi-judge or repeated judging consistency.
+- v0.2.1 shipped repeated-run judge calibration with score ranges, standard deviations, sample reports, and stability gates.
 - Improve score attribution so every dimension score points back to evidence and rubric decisions.
 - Expand benchmark fixtures for good, vague, unsafe, and incomplete skills.
 

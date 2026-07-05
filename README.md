@@ -178,6 +178,21 @@ python -m skillbench ci `
 
 CI writes `ci_result.json` in the run directory and exits non-zero on threshold or regression failures. Text-mode CI also writes `junit.xml` in the run directory by default; use `--junit` and `--sarif` to choose explicit artifact paths for CI uploads.
 
+## Judge Calibration
+
+Use `calibrate` to run the same skill/eval set repeatedly and measure judge stability before trusting a CI threshold or research comparison:
+
+```powershell
+python -m skillbench calibrate `
+  examples\skills\sample-skill\SKILL.md `
+  --eval-set examples\eval_sets\basic-skill-eval.json `
+  --samples 3 `
+  --max-total-range 0.25 `
+  --json
+```
+
+Calibration writes `calibration.json` with total score, dimension, and case-level score ranges, standard deviations, links to each sample report, and a `stable` boolean. Text mode exits non-zero when the run is unstable; JSON mode prints the full artifact path for scripts.
+
 Compare two reports or run directories and emit machine-readable JSON for scripts:
 
 ```powershell

@@ -16,6 +16,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `evo`: run select, execute, reflect, mutate, accept over candidate documents.
+   - `calibrate`: repeat eval runs and summarize judge stability before CI or research comparisons.
    - `compare`: compare existing reports or run directories.
    - `ci`: enforce score and safety thresholds.
    - `dashboard`: serve case-level traceability for a run.
@@ -38,6 +39,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases <path-
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench report .skillbench/runs/latest --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench evo <path-to-SKILL.md> --rounds 3
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench calibrate <path-to-SKILL.md> --samples 3 --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench ci <path-to-SKILL.md> --include-tag safety --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench dashboard .skillbench/runs/latest
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench export-dashboard .skillbench/runs/latest --output .skillbench/site
@@ -63,6 +65,7 @@ Every eval/evo run should produce:
 - `ci_result.json` when using CI gates
 - SARIF output when `ci --sarif <path>` is requested
 - `comparison.json` when comparing runs
+- `calibration.json` when calibrating judge stability
 - `manifest.json` and static HTML pages when exporting dashboards
 
 Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, and judge suggestions.

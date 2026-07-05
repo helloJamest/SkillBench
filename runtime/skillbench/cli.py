@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .calibrate import run_calibration
 from .cases import CaseSelection, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
@@ -71,6 +72,19 @@ def build_parser() -> argparse.ArgumentParser:
     ci_parser.add_argument("--junit", help="Write JUnit XML to this path. Defaults to junit.xml in the run directory when omitted with --json disabled.")
     ci_parser.add_argument("--sarif", help="Write SARIF 2.1.0 output to this path for code scanning integrations.")
     _add_case_selection_args(ci_parser)
+
+    calibrate_parser = sub.add_parser("calibrate", help="Run repeated evaluations and summarize judge stability.")
+    calibrate_parser.add_argument("skill_path")
+    calibrate_parser.add_argument("--eval-set")
+    calibrate_parser.add_argument("--output-dir")
+    calibrate_parser.add_argument("--samples", type=int, default=3)
+    calibrate_parser.add_argument("--max-total-range", type=float, default=0.25)
+    calibrate_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
+    calibrate_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
+    calibrate_parser.add_argument("--judge-command", default=None)
+    calibrate_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
+    calibrate_parser.add_argument("--json", action="store_true")
+    _add_case_selection_args(calibrate_parser)
 
     report_parser = sub.add_parser("report", help="Print a compact report summary.")
     report_parser.add_argument("run_dir")
@@ -220,6 +234,34 @@ def main(argv: list[str] | None = None) -> int:
         if not ci_result["passed"]:
             return 1
         return 0
+
+    if args.command == "calibrate":
+        config = SkillBenchConfig.from_env(args.output_dir)
+        if args.judge_backend:
+            config.judge_backend = args.judge_backend
+        if args.judge_command:
+            config.judge_command = args.judge_command
+        if args.agent_timeout is not None:
+            config.agent_timeout_sec = args.agent_timeout
+        result = run_calibration(
+            args.skill_path,
+            eval_set_path=args.eval_set,
+            output_dir=args.output_dir,
+            samples=args.samples,
+            max_total_range=args.max_total_range,
+            config=config,
+            mode_override=args.mode,
+            **_case_selection_kwargs(args),
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(
+                f"SkillBench calibration stable={result['stable']} "
+                f"samples={result['samples']} total_range={result['total_score']['range']}"
+            )
+            print(f"Calibration: {result['artifacts']['calibration_json']}")
+        return 0 if result["stable"] else 1
 
     if args.command == "report":
         report = _load_report(args.run_dir)

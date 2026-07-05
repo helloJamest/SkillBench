@@ -14,6 +14,7 @@ from skillbench.dashboard import export_dashboard, render_dashboard_html
 from skillbench.cases import CaseSelection, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
+from skillbench.calibrate import run_calibration
 from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
 from skillbench.judges import build_judge_backend
@@ -697,3 +698,64 @@ def test_report_cli_json_outputs_persisted_report(tmp_path, capsys):
     assert data["run_id"] == report.run_id
     assert data["total_score"] == report.total_score
     assert data["case_results"]
+
+
+def test_calibration_marks_deterministic_judge_stable(tmp_path):
+    result = run_calibration(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "cal", samples=3, max_total_range=0.01)
+
+    calibration_path = Path(result["artifacts"]["calibration_json"])
+    assert result["stable"] is True
+    assert result["samples"] == 3
+    assert result["total_score"]["range"] == 0.0
+    assert result["reports"][0]["report_json"].endswith("report.json")
+    assert calibration_path.exists()
+    assert json.loads(calibration_path.read_text(encoding="utf-8"))["stable"] is True
+
+
+def test_calibration_detects_unstable_custom_judge(tmp_path):
+    state_file = tmp_path / "judge_state.txt"
+    judge = tmp_path / "drifting_judge.py"
+    judge.write_text(
+        "import json, pathlib, sys\n"
+        f"state=pathlib.Path({str(state_file)!r})\n"
+        "count=int(state.read_text() or '0') if state.exists() else 0\n"
+        "state.write_text(str(count+1))\n"
+        "payload=json.load(sys.stdin)\n"
+        "score=9 if count % 2 == 0 else 6\n"
+        "json.dump({'case_id': payload['case']['id'], 'score': score, "
+        "'dimension_scores': {'safety': score}, 'rationale': 'drift', "
+        "'suggestion': 'calibrate', 'evidence_refs': []}, sys.stdout)\n",
+        encoding="utf-8",
+    )
+    eval_set = EvalSet(id="calibration-drift", cases=[EvalCase(id="case-1", input="x", dimensions=["safety"])])
+    eval_set_path = write_eval_set(eval_set, tmp_path / "calibration-drift.json")
+    config = SkillBenchConfig(output_root=tmp_path / "runs", judge_backend="custom-command", judge_command=f'"{sys.executable}" "{judge}"')
+
+    result = run_calibration(SAMPLE_SKILL, eval_set_path=eval_set_path, output_dir=tmp_path / "cal", samples=3, max_total_range=0.5, config=config)
+
+    assert result["stable"] is False
+    assert result["total_score"]["range"] > 0.5
+    assert result["cases"]["case-1"]["range"] > 0.5
+
+
+def test_calibrate_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "calibrate",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "cal"),
+            "--samples",
+            "2",
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert data["samples"] == 2
+    assert data["stable"] is True
+    assert Path(data["artifacts"]["calibration_json"]).exists()
