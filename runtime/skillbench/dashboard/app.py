@@ -213,6 +213,7 @@ def _case_html(case: dict, run_path: Path | None = None) -> str:
     judge_output = _read_artifact(run_path, evidence_data.get("judge_output_path")) if run_path else None
     agent_sections = _agent_html(run_path, evidence_data) if run_path else ""
     judge_error_section = _judge_error_html(evidence_data)
+    trusted_metadata_section = _trusted_case_metadata_html(case)
     evidence = html.escape(json.dumps(evidence_data, indent=2, ensure_ascii=False))
     judge_sections = ""
     if judge_input is not None:
@@ -225,6 +226,7 @@ def _case_html(case: dict, run_path: Path | None = None) -> str:
     <p><strong>Score:</strong> {case.get('score')}</p>
     <p><strong>Rationale:</strong> {html.escape(case.get('rationale', ''))}</p>
     <p><strong>Suggestion:</strong> {html.escape(case.get('suggestion', ''))}</p>
+    {trusted_metadata_section}
     <h2>Dimension Scores</h2>
     <table><tbody>{dims}</tbody></table>
     <h2>Evidence</h2>
@@ -233,6 +235,29 @@ def _case_html(case: dict, run_path: Path | None = None) -> str:
     {agent_sections}
     {judge_sections}
     """
+
+
+def _trusted_case_metadata_html(case: dict) -> str:
+    golden = case.get("golden_behavior") or []
+    anti = case.get("anti_patterns") or []
+    notes = case.get("rubric_notes") or []
+    if not golden and not anti and not notes and not case.get("category"):
+        return ""
+    return f"""
+    <section>
+      <h2>Trusted Case Metadata</h2>
+      <p>Difficulty: <code>{html.escape(str(case.get('difficulty', 'medium')))}</code> Category: <code>{html.escape(str(case.get('category', 'general')))}</code></p>
+      <h3>Golden Behavior</h3>{_list_html(golden)}
+      <h3>Anti-Patterns</h3>{_list_html(anti)}
+      <h3>Rubric Notes</h3>{_list_html(notes)}
+    </section>
+    """
+
+
+def _list_html(items: list[str]) -> str:
+    if not items:
+        return "<p>-</p>"
+    return "<ul>" + "".join(f"<li>{html.escape(str(item))}</li>" for item in items) + "</ul>"
 
 
 def _judge_error_html(evidence_data: dict) -> str:

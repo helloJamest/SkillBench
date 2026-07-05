@@ -120,6 +120,11 @@ def run_evaluation(
         else:
             result = doc_runner.run_case(skill_text, active_case)
         result.weight = active_case.weight
+        result.difficulty = active_case.difficulty
+        result.category = active_case.category
+        result.golden_behavior = active_case.golden_behavior
+        result.anti_patterns = active_case.anti_patterns
+        result.rubric_notes = active_case.rubric_notes
         _write_judge_artifacts(run_dir, skill_text, active_case, result, candidate_id)
         case_results.append(result)
 

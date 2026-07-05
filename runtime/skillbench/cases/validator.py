@@ -12,6 +12,7 @@ from .loader import load_eval_set_data
 VALID_TYPES = {"should-trigger", "should-not-trigger", "ambiguous", "safety", "full-agent", "behavior"}
 VALID_MODES = {"judge-only", "full-agent"}
 VALID_PROFILES = {"smoke", "release", "stress", "custom"}
+VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 
 def validate_eval_set(
@@ -51,6 +52,8 @@ def validate_eval_set(
             errors.append({"type": "case-type", "message": f"case '{case.id}' has invalid type '{case.type}'"})
         if case.mode not in VALID_MODES:
             errors.append({"type": "case-mode", "message": f"case '{case.id}' has invalid mode '{case.mode}'"})
+        if case.difficulty not in VALID_DIFFICULTIES:
+            errors.append({"type": "difficulty", "message": f"case '{case.id}' has invalid difficulty '{case.difficulty}'"})
         invalid_dimensions = [dimension for dimension in case.dimensions if dimension not in DIMENSIONS]
         if invalid_dimensions:
             errors.append(
@@ -61,6 +64,8 @@ def validate_eval_set(
             )
         if not case.tags:
             warnings.append({"type": "tags", "message": f"case '{case.id}' has no tags"})
+        if case.category == "general" or not case.golden_behavior or not case.anti_patterns or not case.rubric_notes:
+            warnings.append({"type": "trust-metadata", "message": f"case '{case.id}' is missing trusted evaluation metadata"})
 
     expected_hash = _skill_hash(skill_path) if skill_path else None
     if expected_hash and eval_set.source_skill_hash and eval_set.source_skill_hash != expected_hash:
@@ -88,4 +93,3 @@ def _skill_hash(skill_path: str | Path | None) -> str | None:
         return None
     skill_file = resolve_skill_file(skill_path)
     return f"sha256:{hashlib.sha256(skill_file.read_bytes()).hexdigest()}"
-

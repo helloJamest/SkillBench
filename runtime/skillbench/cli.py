@@ -304,6 +304,11 @@ def _case_inventory(eval_set) -> dict:
             "tags": list(case.tags),
             "dimensions": list(case.dimensions),
             "weight": case.weight,
+            "difficulty": case.difficulty,
+            "category": case.category,
+            "golden_behavior": list(case.golden_behavior),
+            "anti_patterns": list(case.anti_patterns),
+            "rubric_notes": list(case.rubric_notes),
         }
         for case in eval_set.cases
     ]
@@ -326,7 +331,7 @@ def _format_case_inventory(inventory: dict) -> str:
         f"Profile: {inventory.get('profile')}",
         f"Cases: {inventory['case_count']}",
         f"Tags: {', '.join(inventory.get('tags', [])) or '-'}",
-        "ID\tMODE\tTYPE\tTAGS\tDIMENSIONS",
+        "ID\tMODE\tTYPE\tDIFFICULTY\tCATEGORY\tTAGS\tDIMENSIONS",
     ]
     for case in inventory.get("cases", []):
         lines.append(
@@ -335,6 +340,8 @@ def _format_case_inventory(inventory: dict) -> str:
                     str(case["id"]),
                     str(case["mode"]),
                     str(case["type"]),
+                    str(case["difficulty"]),
+                    str(case["category"]),
                     ",".join(case.get("tags", [])) or "-",
                     ",".join(case.get("dimensions", [])) or "-",
                 ]

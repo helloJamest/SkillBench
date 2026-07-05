@@ -30,6 +30,7 @@ DIMENSION_WEIGHTS = {
 
 RunMode = Literal["judge-only", "full-agent"]
 CaseType = Literal["should-trigger", "should-not-trigger", "ambiguous", "safety", "full-agent", "behavior"]
+Difficulty = Literal["easy", "medium", "hard"]
 
 
 @dataclass
@@ -42,6 +43,11 @@ class EvalCase:
     dimensions: list[str] = field(default_factory=lambda: list(DIMENSIONS))
     weight: float = 1.0
     tags: list[str] = field(default_factory=list)
+    difficulty: Difficulty = "medium"
+    category: str = "general"
+    golden_behavior: list[str] = field(default_factory=list)
+    anti_patterns: list[str] = field(default_factory=list)
+    rubric_notes: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -75,6 +81,11 @@ class CaseResult:
     rationale: str
     suggestion: str
     weight: float = 1.0
+    difficulty: Difficulty = "medium"
+    category: str = "general"
+    golden_behavior: list[str] = field(default_factory=list)
+    anti_patterns: list[str] = field(default_factory=list)
+    rubric_notes: list[str] = field(default_factory=list)
     evidence: dict[str, Any] = field(default_factory=dict)
 
 

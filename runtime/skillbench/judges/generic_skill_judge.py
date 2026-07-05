@@ -46,6 +46,11 @@ class GenericSkillJudge:
             rationale=rationale,
             suggestion=suggestion,
             weight=case.weight,
+            difficulty=case.difficulty,
+            category=case.category,
+            golden_behavior=case.golden_behavior,
+            anti_patterns=case.anti_patterns,
+            rubric_notes=case.rubric_notes,
             evidence=evidence,
         )
 

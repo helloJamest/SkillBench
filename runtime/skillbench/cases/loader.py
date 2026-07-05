@@ -18,6 +18,11 @@ def load_eval_set_data(path: str | Path) -> EvalSet:
             dimensions=item.get("dimensions", list(DIMENSIONS)),
             weight=float(item.get("weight", 1.0)),
             tags=item.get("tags", []),
+            difficulty=item.get("difficulty", "medium"),
+            category=item.get("category", "general"),
+            golden_behavior=item.get("golden_behavior", []),
+            anti_patterns=item.get("anti_patterns", []),
+            rubric_notes=item.get("rubric_notes", []),
             metadata=item.get("metadata", {}),
         )
         for item in data.get("cases", [])

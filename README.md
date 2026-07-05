@@ -83,6 +83,18 @@ python -m skillbench generate-cases `
 
 Generated eval sets include `profile`, `source_skill_hash`, generator metadata, case tags, and should-trigger / should-not-trigger / ambiguous / safety cases.
 
+## Trusted Eval Metadata
+
+SkillBench eval cases can describe the intent behind each score, not just the prompt to run:
+
+- `difficulty`: `easy`, `medium`, or `hard`.
+- `category`: a stable grouping such as `trigger`, `safety`, `workflow`, or `evidence`.
+- `golden_behavior`: behaviors the skill or agent should demonstrate.
+- `anti_patterns`: behaviors that should lower the score.
+- `rubric_notes`: case-specific scoring guidance for judges and reviewers.
+
+These fields are written into generated eval sets, judge input artifacts, `report.json`, `case_results.jsonl`, `list-cases --json`, and dashboard case pages. Older eval sets that omit them still load with safe defaults.
+
 Validate an eval set before using it in CI:
 
 ```powershell
