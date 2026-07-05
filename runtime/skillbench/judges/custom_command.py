@@ -5,6 +5,7 @@ import subprocess
 from typing import Any
 
 from ..schemas import CaseResult, EvalCase, to_dict
+from .attribution import build_dimension_attributions
 from .output_schema import JudgeOutputError, validate_judge_output
 
 
@@ -114,6 +115,13 @@ class CustomCommandJudge:
             golden_behavior=case.golden_behavior,
             anti_patterns=case.anti_patterns,
             rubric_notes=case.rubric_notes,
+            dimension_attributions=build_dimension_attributions(
+                data["dimension_scores"],
+                data["rationale"],
+                data["suggestion"],
+                data["evidence_refs"],
+                data["dimension_attributions"],
+            ),
             evidence=result_evidence,
         )
 
@@ -161,6 +169,12 @@ def _failure_result(
         golden_behavior=case.golden_behavior,
         anti_patterns=case.anti_patterns,
         rubric_notes=case.rubric_notes,
+        dimension_attributions=build_dimension_attributions(
+            dimension_scores,
+            f"Custom judge failed: {kind}. {message}",
+            "Inspect judge_error stdout/stderr and fix the custom judge command or output schema.",
+            ["evidence.judge_error"],
+        ),
         evidence=result_evidence,
     )
 

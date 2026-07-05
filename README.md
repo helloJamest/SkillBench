@@ -95,6 +95,17 @@ SkillBench eval cases can describe the intent behind each score, not just the pr
 
 These fields are written into generated eval sets, judge input artifacts, `report.json`, `case_results.jsonl`, `list-cases --json`, and dashboard case pages. Older eval sets that omit them still load with safe defaults.
 
+## Score Attribution
+
+Each case result includes `dimension_attributions` for every scored dimension. An attribution records:
+
+- normalized score and pass/fail status
+- dimension-level rationale
+- evidence references used by the judge
+- targeted repair suggestion
+
+Attributions are persisted in `report.json`, `case_results.jsonl`, and `judge/<case_id>.output.json`, and they are rendered on dashboard case detail pages.
+
 Validate an eval set before using it in CI:
 
 ```powershell

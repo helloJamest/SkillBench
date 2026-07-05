@@ -59,6 +59,7 @@ Every eval/evo run should produce:
 - `eval_set.json`
 - `report.json`
 - `case_results.jsonl`
+- dimension-level `dimension_attributions` in case results and judge output artifacts
 - candidate snapshots
 - optional `reflection.json` and mutation records
 - `comet_offline.jsonl` when Comet ML is unavailable

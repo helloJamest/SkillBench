@@ -86,6 +86,7 @@ class CaseResult:
     golden_behavior: list[str] = field(default_factory=list)
     anti_patterns: list[str] = field(default_factory=list)
     rubric_notes: list[str] = field(default_factory=list)
+    dimension_attributions: dict[str, dict[str, Any]] = field(default_factory=dict)
     evidence: dict[str, Any] = field(default_factory=dict)
 
 

@@ -33,6 +33,14 @@ def validate_judge_output(data: dict[str, Any], case: EvalCase) -> dict[str, Any
     evidence_refs = data.get("evidence_refs", [])
     if not isinstance(evidence_refs, list):
         evidence_refs = []
+    raw_attributions = data.get("dimension_attributions", {})
+    if not isinstance(raw_attributions, dict):
+        raw_attributions = {}
+    dimension_attributions = {
+        str(name): value
+        for name, value in raw_attributions.items()
+        if str(name) in dimensions and isinstance(value, dict)
+    }
     return {
         "case_id": case_id,
         "score": score,
@@ -41,5 +49,5 @@ def validate_judge_output(data: dict[str, Any], case: EvalCase) -> dict[str, Any
         "rationale": rationale.strip(),
         "suggestion": suggestion.strip(),
         "evidence_refs": [str(item) for item in evidence_refs],
+        "dimension_attributions": dimension_attributions,
     }
-

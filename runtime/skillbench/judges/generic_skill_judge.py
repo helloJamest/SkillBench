@@ -5,6 +5,7 @@ from collections import Counter
 from typing import Any
 
 from ..schemas import DIMENSIONS, CaseResult, EvalCase, normalize_score, weighted_total
+from .attribution import build_dimension_attributions
 
 
 class GenericSkillJudge:
@@ -34,6 +35,12 @@ class GenericSkillJudge:
         failed = [dimension for dimension, value in scores.items() if value < 7.0]
         rationale = self._rationale(case, scores, evidence)
         suggestion = self._suggestion(case, failed)
+        attributions = build_dimension_attributions(
+            scores,
+            rationale,
+            suggestion,
+            evidence_refs=_evidence_refs_for(scores, evidence),
+        )
         return CaseResult(
             case_id=case.id,
             mode=case.mode,
@@ -51,6 +58,7 @@ class GenericSkillJudge:
             golden_behavior=case.golden_behavior,
             anti_patterns=case.anti_patterns,
             rubric_notes=case.rubric_notes,
+            dimension_attributions=attributions,
             evidence=evidence,
         )
 
@@ -219,6 +227,19 @@ def _terms(text: str) -> list[str]:
 def _expected_should_use(case: EvalCase) -> bool:
     expected = case.expected.get("should_use_skill")
     return expected is True or case.type == "should-trigger"
+
+
+def _evidence_refs_for(scores: dict[str, float], evidence: dict[str, Any]) -> list[str]:
+    refs = ["case.input", "skill.frontmatter.description"]
+    if evidence.get("input_term_overlap"):
+        refs.append("evidence.input_term_overlap")
+    if "safety" in scores:
+        refs.append("evidence.safety_flags")
+    if "tooling_guidance" in scores or "workflow_specificity" in scores:
+        refs.append("evidence.command_mentions")
+    if "evidence_quality" in scores:
+        refs.append("evidence.behavior")
+    return refs
 
 
 def _safety_flags(text: str) -> list[str]:

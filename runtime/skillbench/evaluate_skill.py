@@ -8,6 +8,7 @@ from .cases.loader import load_eval_set_data
 from .cases.selection import CaseSelection, select_eval_cases
 from .config import SkillBenchConfig, make_run_id, read_skill, resolve_skill_file
 from .judges import build_judge_backend
+from .judges.attribution import build_dimension_attributions
 from .observability.comet_logger import CometLogger
 from .observability.logging_io import write_json
 from .observability.report_writer import ReportWriter
@@ -125,6 +126,8 @@ def run_evaluation(
         result.golden_behavior = active_case.golden_behavior
         result.anti_patterns = active_case.anti_patterns
         result.rubric_notes = active_case.rubric_notes
+        if not getattr(result, "dimension_attributions", None):
+            result.dimension_attributions = build_dimension_attributions(result.dimension_scores, result.rationale, result.suggestion)
         _write_judge_artifacts(run_dir, skill_text, active_case, result, candidate_id)
         case_results.append(result)
 
@@ -206,6 +209,7 @@ def _write_judge_artifacts(run_dir: Path, skill_text: str, case: EvalCase, resul
         "failed_dimensions": result.failed_dimensions,
         "rationale": result.rationale,
         "suggestion": result.suggestion,
+        "dimension_attributions": result.dimension_attributions,
     }
     write_json(run_dir / input_rel, judge_input)
     write_json(run_dir / output_rel, judge_output)

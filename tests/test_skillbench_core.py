@@ -49,6 +49,24 @@ def test_eval_writes_judge_artifacts_and_summary(tmp_path):
     assert (run_dir / first.evidence["judge_output_path"]).exists()
 
 
+def test_eval_writes_dimension_attributions_to_report_and_judge_output(tmp_path):
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
+    run_dir = Path(report.artifacts["report_json"]).parent
+    first = report.case_results[0]
+    first_dimension = next(iter(first.dimension_scores))
+    judge_output = json.loads((run_dir / first.evidence["judge_output_path"]).read_text(encoding="utf-8"))
+    report_json = json.loads(Path(report.artifacts["report_json"]).read_text(encoding="utf-8"))
+
+    attribution = first.dimension_attributions[first_dimension]
+    assert attribution["score"] == first.dimension_scores[first_dimension]
+    assert attribution["status"] in {"pass", "fail"}
+    assert attribution["rationale"]
+    assert isinstance(attribution["evidence_refs"], list)
+    assert attribution["suggestion"]
+    assert judge_output["dimension_attributions"][first_dimension]["score"] == attribution["score"]
+    assert report_json["case_results"][0]["dimension_attributions"][first_dimension]["rationale"] == attribution["rationale"]
+
+
 def test_generate_cases_writes_metadata_and_case_types(tmp_path):
     eval_set = generate_eval_set(SAMPLE_SKILL, profile="smoke", count=8)
     output = write_eval_set(eval_set, tmp_path / "generated.json")
@@ -331,6 +349,18 @@ def test_dashboard_case_detail_renders_trusted_case_metadata(tmp_path):
     assert "Safety evidence must be explicit." in html
 
 
+def test_dashboard_case_detail_renders_dimension_attributions(tmp_path):
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
+    run_dir = Path(report.artifacts["report_json"]).parent
+    case_id = report.case_results[0].case_id
+
+    html = render_dashboard_html(run_dir / "cases" / case_id)
+
+    assert "Dimension Attribution" in html
+    assert "Evidence Refs" in html
+    assert "trigger_clarity" in html
+
+
 def test_dashboard_case_detail_renders_full_agent_artifacts(tmp_path):
     command = (
         f'"{sys.executable}" -c '
@@ -537,7 +567,9 @@ def test_custom_command_judge_returns_case_result(tmp_path):
         "payload=json.load(sys.stdin)\n"
         "json.dump({'case_id': payload['case']['id'], 'score': 8.5, "
         "'dimension_scores': {'safety': 9}, 'rationale': 'ok', "
-        "'suggestion': 'keep', 'evidence_refs': []}, sys.stdout)\n",
+        "'suggestion': 'keep', 'evidence_refs': [], "
+        "'dimension_attributions': {'safety': {'rationale': 'safe enough', "
+        "'evidence_refs': ['rubric.safety'], 'suggestion': 'keep boundaries'}}}, sys.stdout)\n",
         encoding="utf-8",
     )
     backend = build_judge_backend("custom-command", f'"{sys.executable}" "{fake}"')
@@ -545,6 +577,8 @@ def test_custom_command_judge_returns_case_result(tmp_path):
 
     assert result.score == 8.5
     assert result.dimension_scores["safety"] == 9
+    assert result.dimension_attributions["safety"]["rationale"] == "safe enough"
+    assert result.dimension_attributions["safety"]["evidence_refs"] == ["rubric.safety"]
 
 
 def test_custom_command_judge_failure_is_recorded_as_case_result(tmp_path):

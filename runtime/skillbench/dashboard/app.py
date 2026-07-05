@@ -214,6 +214,7 @@ def _case_html(case: dict, run_path: Path | None = None) -> str:
     agent_sections = _agent_html(run_path, evidence_data) if run_path else ""
     judge_error_section = _judge_error_html(evidence_data)
     trusted_metadata_section = _trusted_case_metadata_html(case)
+    attribution_section = _dimension_attribution_html(case)
     evidence = html.escape(json.dumps(evidence_data, indent=2, ensure_ascii=False))
     judge_sections = ""
     if judge_input is not None:
@@ -229,11 +230,43 @@ def _case_html(case: dict, run_path: Path | None = None) -> str:
     {trusted_metadata_section}
     <h2>Dimension Scores</h2>
     <table><tbody>{dims}</tbody></table>
+    {attribution_section}
     <h2>Evidence</h2>
     <pre>{evidence}</pre>
     {judge_error_section}
     {agent_sections}
     {judge_sections}
+    """
+
+
+def _dimension_attribution_html(case: dict) -> str:
+    attributions = case.get("dimension_attributions") or {}
+    if not isinstance(attributions, dict) or not attributions:
+        return ""
+    rows = ""
+    for dimension, attribution in sorted(attributions.items()):
+        if not isinstance(attribution, dict):
+            continue
+        refs = attribution.get("evidence_refs") or []
+        if not isinstance(refs, list):
+            refs = [refs]
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(dimension))}</td>"
+            f"<td>{html.escape(str(attribution.get('score', '')))}</td>"
+            f"<td>{html.escape(str(attribution.get('status', '')))}</td>"
+            f"<td>{html.escape(str(attribution.get('rationale', '')))}</td>"
+            f"<td>{html.escape(', '.join(str(ref) for ref in refs))}</td>"
+            f"<td>{html.escape(str(attribution.get('suggestion', '')))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    return f"""
+    <section>
+      <h2>Dimension Attribution</h2>
+      <table><thead><tr><th>Dimension</th><th>Score</th><th>Status</th><th>Rationale</th><th>Evidence Refs</th><th>Suggestion</th></tr></thead><tbody>{rows}</tbody></table>
+    </section>
     """
 
 
