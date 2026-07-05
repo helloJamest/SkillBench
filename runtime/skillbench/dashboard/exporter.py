@@ -24,6 +24,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
             case_html = render_dashboard_html(run_path / "cases" / case_id).replace('href="/">Back to report</a>', 'href="../../index.html">Back to report</a>')
             _write_page(output / "cases" / case_id / "index.html", case_html, pages, output)
         _write_artifact_pages(run_path, output, pages)
+        _write_comparison_page(run_path, output, pages)
     elif evolution_path.exists():
         evolution = read_json(evolution_path)
         index_html = _rewrite_evolution_index(render_dashboard_html(run_path), evolution)
@@ -36,6 +37,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
             )
             _write_page(output / "evolution" / "rounds" / str(round_index) / "index.html", round_html, pages, output)
         _write_artifact_pages(run_path, output, pages)
+        _write_comparison_page(run_path, output, pages)
     else:
         raise FileNotFoundError(f"No report.json or evolution.json found in {run_path}")
 
@@ -66,6 +68,17 @@ def _write_artifact_pages(run_path: Path, output: Path, pages: list[str]) -> Non
         _write_page(output / "artifacts" / Path(rel) / "index.html", detail_html, pages, output)
 
 
+def _write_comparison_page(run_path: Path, output: Path, pages: list[str]) -> None:
+    if not (run_path / "comparison.json").exists():
+        return
+    comparison_html = (
+        render_dashboard_html(run_path / "comparison")
+        .replace('href="/">Back to report</a>', 'href="../index.html">Back to report</a>')
+        .replace('href="/artifacts/comparison.json"', 'href="../artifacts/comparison.json/index.html"')
+    )
+    _write_page(output / "comparison" / "index.html", comparison_html, pages, output)
+
+
 def _rewrite_artifact_index(run_path: Path, html: str) -> str:
     html = html.replace('href="/">Back to report</a>', 'href="../index.html">Back to report</a>')
     for artifact in _iter_artifacts(run_path):
@@ -84,6 +97,8 @@ def _rewrite_report_index(html: str, report: dict[str, Any]) -> str:
         case_id = str(case.get("case_id", ""))
         if case_id:
             html = html.replace(f'href="/cases/{case_id}"', f'href="cases/{case_id}/index.html"')
+    html = html.replace('href="/artifacts"', 'href="artifacts/index.html"')
+    html = html.replace('href="/comparison"', 'href="comparison/index.html"')
     return html
 
 

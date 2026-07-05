@@ -20,7 +20,7 @@ from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
-from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_sarif_report
+from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
 from skillbench.schemas import EvalCase, EvalSet
 
 
@@ -546,6 +546,43 @@ def test_export_dashboard_writes_static_report_pages(tmp_path):
     assert "Judge Input" in first_case_page.read_text(encoding="utf-8")
     raw_report_page = tmp_path / "site" / "artifacts" / "report.json" / "index.html"
     assert "Raw Artifact" in raw_report_page.read_text(encoding="utf-8")
+
+
+def test_dashboard_renders_run_comparison_page(tmp_path):
+    left = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "left")
+    right = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "right")
+    run_dir = Path(right.artifacts["report_json"]).parent
+    comparison = build_comparison(
+        json.loads(Path(left.artifacts["report_json"]).read_text(encoding="utf-8")),
+        json.loads(Path(right.artifacts["report_json"]).read_text(encoding="utf-8")),
+    )
+    write_comparison(comparison, run_dir / "comparison.json")
+
+    html = render_dashboard_html(run_dir / "comparison")
+
+    assert "SkillBench Comparison" in html
+    assert "Total Delta" in html
+    assert left.run_id in html
+    assert right.run_id in html
+    assert "Dimension Deltas" in html
+    assert "safety" in html
+
+
+def test_export_dashboard_writes_comparison_page_when_present(tmp_path):
+    left = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "left")
+    right = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "right")
+    run_dir = Path(right.artifacts["report_json"]).parent
+    comparison = build_comparison(
+        json.loads(Path(left.artifacts["report_json"]).read_text(encoding="utf-8")),
+        json.loads(Path(right.artifacts["report_json"]).read_text(encoding="utf-8")),
+    )
+    write_comparison(comparison, run_dir / "comparison.json")
+
+    manifest = export_dashboard(run_dir, tmp_path / "site")
+
+    assert "comparison/index.html" in manifest["pages"]
+    comparison_page = tmp_path / "site" / "comparison" / "index.html"
+    assert "SkillBench Comparison" in comparison_page.read_text(encoding="utf-8")
 
 
 def test_export_dashboard_static_case_page_includes_full_agent_artifacts(tmp_path):

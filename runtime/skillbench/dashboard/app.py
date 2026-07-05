@@ -11,6 +11,7 @@ from ..observability.logging_io import read_json, resolve_run_dir
 def render_dashboard_html(run_dir: str | Path) -> str:
     requested_path, filters = _split_path_query(run_dir)
     route_case_id: str | None = None
+    route_comparison = False
     route_round_index: int | None = None
     route_artifact: Path | None = None
     if "artifacts" in requested_path.parts:
@@ -18,6 +19,9 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         artifact_index = max(index for index, part in enumerate(parts) if part == "artifacts")
         route_artifact = Path(*parts[artifact_index + 1 :]) if artifact_index + 1 < len(parts) else Path()
         requested_path = Path(*parts[:artifact_index])
+    if requested_path.name == "comparison" and not (requested_path / "report.json").exists() and not (requested_path / "evolution.json").exists():
+        route_comparison = True
+        requested_path = requested_path.parent
     if len(requested_path.parts) >= 2 and requested_path.parts[-2] == "cases":
         route_case_id = requested_path.parts[-1]
         requested_path = Path(*requested_path.parts[:-2])
@@ -30,6 +34,11 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         if route_artifact == Path():
             return _render_artifacts_index(run_path)
         return _render_artifact(run_path, route_artifact)
+    if route_comparison:
+        comparison_path = run_path / "comparison.json"
+        if comparison_path.exists():
+            return _render_comparison(run_path, read_json(comparison_path))
+        return _page("Comparison not found", "<p>No comparison.json found.</p>")
 
     report_path = run_path / "report.json"
     if not report_path.exists():
@@ -97,6 +106,13 @@ def create_app(run_dir: str | Path):
             return JSONResponse(data)
         return JSONResponse({"error": "round not found", "round_index": round_index}, status_code=404)
 
+    @app.get("/api/comparison")
+    def api_comparison():
+        comparison = run_path / "comparison.json"
+        if comparison.exists():
+            return JSONResponse(read_json(comparison))
+        return JSONResponse({"error": "comparison.json not found"}, status_code=404)
+
     @app.get("/artifacts", response_class=HTMLResponse)
     def artifacts_index():
         return _render_artifacts_index(run_path)
@@ -111,6 +127,13 @@ def create_app(run_dir: str | Path):
         if evolution.exists():
             return _render_evolution_round(run_path, read_json(evolution), round_index)
         return _page("Evolution not found", "<p>No evolution.json found.</p>")
+
+    @app.get("/comparison", response_class=HTMLResponse)
+    def comparison():
+        comparison_path = run_path / "comparison.json"
+        if comparison_path.exists():
+            return _render_comparison(run_path, read_json(comparison_path))
+        return _page("Comparison not found", "<p>No comparison.json found.</p>")
 
     @app.get("/cases/{case_id}", response_class=HTMLResponse)
     def case_detail(case_id: str):
@@ -151,12 +174,16 @@ def _render_report(run_path: Path, report: dict, filters: dict[str, str] | None 
     if not cases:
         cases = "<tr><td colspan=\"4\">No cases match the active filters.</td></tr>"
     filters_html = _case_filters_html(all_cases, filters, len(filtered_cases))
+    comparison_link = ""
+    if (run_path / "comparison.json").exists():
+        comparison_link = '<p><a href="/comparison">View run comparison</a></p>'
     body = f"""
     <section class="summary">
       <h2>{html.escape(report.get('run_id', 'run'))}</h2>
       <p>Total <strong>{report.get('total_score')}</strong> Grade <strong>{html.escape(report.get('grade', ''))}</strong> Worst case <strong>{html.escape(str(report.get('worst_case_id')))}</strong></p>
       <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
       <p><a href="/artifacts">Browse raw artifacts</a></p>
+      {comparison_link}
     </section>
     <section>
       <h2>Dimension Scores</h2>
@@ -169,6 +196,55 @@ def _render_report(run_path: Path, report: dict, filters: dict[str, str] | None 
     </section>
     """
     return _page("SkillBench Report", body)
+
+
+def _render_comparison(run_path: Path, comparison: dict) -> str:
+    rows = ""
+    for dimension, delta in sorted((comparison.get("dimension_deltas") or {}).items()):
+        rows += (
+            "<tr>"
+            f"<td>{html.escape(str(dimension))}</td>"
+            f"<td>{html.escape(_format_number(delta, signed=True))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        rows = "<tr><td colspan=\"2\">No dimension deltas found.</td></tr>"
+    body = f"""
+    <p><a href="/">Back to report</a></p>
+    <section class="summary">
+      <h2>Total Delta <strong>{html.escape(_format_number(comparison.get('total_delta'), signed=True))}</strong></h2>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/artifacts/comparison.json">Open raw comparison.json</a></p>
+      <table>
+        <thead><tr><th></th><th>Left</th><th>Right</th></tr></thead>
+        <tbody>
+          <tr><th>Run ID</th><td>{html.escape(str(comparison.get('left_run_id', '')))}</td><td>{html.escape(str(comparison.get('right_run_id', '')))}</td></tr>
+          <tr><th>Total Score</th><td>{html.escape(_format_number(comparison.get('left_total_score')))}</td><td>{html.escape(_format_number(comparison.get('right_total_score')))}</td></tr>
+          <tr><th>Worst Case</th><td>{html.escape(str(comparison.get('left_worst_case_id', '')))}</td><td>{html.escape(str(comparison.get('right_worst_case_id', '')))}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Dimension Deltas</h2>
+      <table><thead><tr><th>Dimension</th><th>Delta</th></tr></thead><tbody>{rows}</tbody></table>
+    </section>
+    """
+    return _page("SkillBench Comparison", body)
+
+
+def _format_number(value: object, signed: bool = False) -> str:
+    if isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (int, float)):
+        text = f"{value:.3f}".rstrip("0").rstrip(".")
+        if text == "-0":
+            text = "0"
+        if signed and value > 0:
+            return f"+{text}"
+        return text
+    if value is None:
+        return ""
+    return str(value)
 
 
 def _split_path_query(value: str | Path) -> tuple[Path, dict[str, str]]:

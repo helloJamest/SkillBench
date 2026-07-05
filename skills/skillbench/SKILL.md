@@ -69,9 +69,9 @@ Every eval/evo run should produce:
 - `ci_result.json` when using CI gates
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow for CI summaries
-- `comparison.json` when comparing runs
+- `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures
 - `manifest.json` and static HTML pages when exporting dashboards
 
-Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, and raw artifacts. Dashboard report pages include case filters and an artifact browser at `/artifacts`.
+Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, and comparison deltas. Dashboard report pages include case filters, an artifact browser at `/artifacts`, and a comparison view when `comparison.json` exists.

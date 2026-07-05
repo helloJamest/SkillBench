@@ -238,7 +238,7 @@ Compare two reports or run directories and emit machine-readable JSON for script
 python -m skillbench compare .skillbench\runs\baseline .skillbench\runs\candidate --json
 ```
 
-`compare` also writes `comparison.json` next to the right-hand report.
+`compare` also writes `comparison.json` next to the right-hand report. When that file is present, the dashboard exposes `/comparison` with total-score delta, run IDs, worst cases, and dimension deltas.
 
 ## Artifacts
 
@@ -275,7 +275,7 @@ python -m skillbench export-dashboard `
 ```
 
 Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
-Static exports include `artifacts/index.html` and raw artifact detail pages.
+Static exports include `artifacts/index.html`, raw artifact detail pages, and `comparison/index.html` when `comparison.json` exists.
 
 ## Optional Integrations
 
