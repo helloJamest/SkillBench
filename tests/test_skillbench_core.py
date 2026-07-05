@@ -14,6 +14,7 @@ from skillbench.dashboard import export_dashboard, render_dashboard_html
 from skillbench.cases import CaseSelection, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
+from skillbench.benchmark import run_benchmark
 from skillbench.calibrate import run_calibration
 from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
@@ -25,6 +26,8 @@ from skillbench.schemas import EvalCase, EvalSet
 
 SAMPLE_SKILL = ROOT / "examples" / "skills" / "sample-skill" / "SKILL.md"
 EVAL_SET = ROOT / "examples" / "eval_sets" / "basic-skill-eval.json"
+BENCHMARK_FIXTURES = ROOT / "examples" / "benchmarks" / "skills"
+BENCHMARK_EVAL_SET = ROOT / "examples" / "benchmarks" / "eval_sets" / "skill-quality-benchmark.json"
 
 
 def test_eval_writes_report(tmp_path):
@@ -793,3 +796,52 @@ def test_calibrate_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
     assert data["samples"] == 2
     assert data["stable"] is True
     assert Path(data["artifacts"]["calibration_json"]).exists()
+
+
+def test_benchmark_fixtures_rank_good_skill_first(tmp_path):
+    result = run_benchmark(BENCHMARK_FIXTURES, BENCHMARK_EVAL_SET, output_dir=tmp_path / "bench")
+
+    fixture_ids = {fixture["fixture_id"] for fixture in result["fixtures"]}
+    scores = {fixture["fixture_id"]: fixture["total_score"] for fixture in result["fixtures"]}
+    benchmark_path = Path(result["artifacts"]["benchmark_json"])
+
+    assert fixture_ids == {"good-skill", "vague-skill", "unsafe-skill", "incomplete-skill"}
+    assert result["ranking"][0]["fixture_id"] == "good-skill"
+    assert scores["good-skill"] > scores["vague-skill"]
+    assert scores["good-skill"] > scores["unsafe-skill"]
+    assert benchmark_path.exists()
+    assert json.loads(benchmark_path.read_text(encoding="utf-8"))["ranking"][0]["fixture_id"] == "good-skill"
+
+
+def test_benchmark_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "benchmark",
+            "--fixtures",
+            str(BENCHMARK_FIXTURES),
+            "--eval-set",
+            str(BENCHMARK_EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "bench"),
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 0
+    assert {fixture["fixture_id"] for fixture in data["fixtures"]} == {"good-skill", "vague-skill", "unsafe-skill", "incomplete-skill"}
+    assert data["ranking"][0]["fixture_id"] == "good-skill"
+    assert Path(data["artifacts"]["benchmark_json"]).exists()
+
+
+def test_benchmark_eval_set_contains_trusted_case_metadata():
+    data = json.loads(BENCHMARK_EVAL_SET.read_text(encoding="utf-8"))
+
+    assert data["id"] == "skill-quality-benchmark-v1"
+    assert len(data["cases"]) >= 4
+    assert all(case["difficulty"] in {"easy", "medium", "hard"} for case in data["cases"])
+    assert all(case["category"] for case in data["cases"])
+    assert all(case["golden_behavior"] for case in data["cases"])
+    assert all(case["anti_patterns"] for case in data["cases"])
+    assert all(case["rubric_notes"] for case in data["cases"])

@@ -39,6 +39,10 @@ jobs:
           skillbench eval examples/skills/sample-skill/SKILL.md \
             --eval-set examples/eval_sets/basic-skill-eval.json \
             --output-dir .skillbench/runs
+          skillbench benchmark \
+            --fixtures examples/benchmarks/skills \
+            --eval-set examples/benchmarks/eval_sets/skill-quality-benchmark.json \
+            --output-dir .skillbench/benchmarks \
+            --json
           skillbench export-dashboard .skillbench/runs/latest \
             --output .skillbench/dashboard-site
-

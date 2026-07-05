@@ -14,7 +14,7 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.2.0 shipped eval cases with difficulty, category, golden behavior, anti-patterns, and rubric notes.
 - v0.2.1 shipped repeated-run judge calibration with score ranges, standard deviations, sample reports, and stability gates.
 - v0.2.2 shipped dimension-level score attribution with rationale, evidence refs, and repair suggestions.
-- Expand benchmark fixtures for good, vague, unsafe, and incomplete skills.
+- v0.2.3 shipped benchmark fixtures for good, vague, unsafe, and incomplete skills plus a `benchmark` CLI summary.
 
 ## v0.3.x: Full-Agent Auditing
 

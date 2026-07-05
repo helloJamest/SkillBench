@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .benchmark import run_benchmark
 from .calibrate import run_calibration
 from .cases import CaseSelection, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
@@ -85,6 +86,14 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     calibrate_parser.add_argument("--json", action="store_true")
     _add_case_selection_args(calibrate_parser)
+
+    benchmark_parser = sub.add_parser("benchmark", help="Run the bundled benchmark fixtures and write benchmark.json.")
+    benchmark_parser.add_argument("--fixtures", default="examples/benchmarks/skills")
+    benchmark_parser.add_argument("--eval-set", default="examples/benchmarks/eval_sets/skill-quality-benchmark.json")
+    benchmark_parser.add_argument("--output-dir")
+    benchmark_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
+    benchmark_parser.add_argument("--judge-command", default=None)
+    benchmark_parser.add_argument("--json", action="store_true")
 
     report_parser = sub.add_parser("report", help="Print a compact report summary.")
     report_parser.add_argument("run_dir")
@@ -263,6 +272,24 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Calibration: {result['artifacts']['calibration_json']}")
         return 0 if result["stable"] else 1
 
+    if args.command == "benchmark":
+        config = SkillBenchConfig.from_env(args.output_dir or ".skillbench/benchmarks")
+        if args.judge_backend:
+            config.judge_backend = args.judge_backend
+        if args.judge_command:
+            config.judge_command = args.judge_command
+        result = run_benchmark(
+            args.fixtures,
+            args.eval_set,
+            output_dir=args.output_dir or config.output_root,
+            config=config,
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(_format_benchmark(result))
+        return 0
+
     if args.command == "report":
         report = _load_report(args.run_dir)
         if args.json:
@@ -418,4 +445,20 @@ def _format_compare(left: dict, right: dict) -> str:
         lval = float(left.get("dimension_scores", {}).get(name, 0.0))
         rval = float(right.get("dimension_scores", {}).get(name, 0.0))
         lines.append(f"  {name}: {rval - lval:+.3f}")
+    return "\n".join(lines)
+
+
+def _format_benchmark(result: dict) -> str:
+    lines = [
+        f"Benchmark: {result['benchmark_id']}",
+        f"Run: {result['run_id']}",
+        f"Fixtures: {result['fixture_count']}",
+        "Ranking:",
+    ]
+    for item in result.get("ranking", []):
+        lines.append(
+            f"  {item['rank']}. {item['fixture_id']} total={item['total_score']} "
+            f"grade={item['grade']} worst_case={item.get('worst_case_id')}"
+        )
+    lines.append(f"Benchmark JSON: {result['artifacts']['benchmark_json']}")
     return "\n".join(lines)

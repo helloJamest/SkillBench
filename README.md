@@ -22,6 +22,7 @@ From the repository root:
 python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
+skillbench benchmark --json
 ```
 
 Start the local dashboard for the latest run:
@@ -203,6 +204,20 @@ python -m skillbench calibrate `
 ```
 
 Calibration writes `calibration.json` with total score, dimension, and case-level score ranges, standard deviations, links to each sample report, and a `stable` boolean. Text mode exits non-zero when the run is unstable; JSON mode prints the full artifact path for scripts.
+
+## Benchmark Fixtures
+
+Use the bundled benchmark to sanity-check judge behavior and compare representative skill quality patterns:
+
+```powershell
+python -m skillbench benchmark `
+  --fixtures examples\benchmarks\skills `
+  --eval-set examples\benchmarks\eval_sets\skill-quality-benchmark.json `
+  --output-dir .skillbench\benchmarks `
+  --json
+```
+
+The benchmark evaluates four fixtures: `good-skill`, `vague-skill`, `unsafe-skill`, and `incomplete-skill`. It writes a top-level `benchmark.json` with fixture scores, ranking, worst cases, dimension scores, and links to each fixture's normal `report.json`.
 
 Compare two reports or run directories and emit machine-readable JSON for scripts:
 

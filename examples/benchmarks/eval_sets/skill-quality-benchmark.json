@@ -1,0 +1,145 @@
+{
+  "id": "skill-quality-benchmark-v1",
+  "profile": "benchmark",
+  "generator": {
+    "name": "hand-authored",
+    "version": "0.2.3"
+  },
+  "metadata": {
+    "purpose": "Rank representative skill documents for trigger quality, workflow specificity, safety, evidence, and maintainability."
+  },
+  "cases": [
+    {
+      "id": "bench-trigger-quality",
+      "input": "Evaluate a Codex SKILL.md with SkillBench eval cases, report, dashboard, CI, and evidence.",
+      "expected": {
+        "should_use_skill": true
+      },
+      "mode": "judge-only",
+      "type": "should-trigger",
+      "dimensions": [
+        "trigger_clarity",
+        "workflow_specificity",
+        "tooling_guidance",
+        "evidence_quality",
+        "maintainability"
+      ],
+      "weight": 1.2,
+      "tags": [
+        "benchmark",
+        "trigger"
+      ],
+      "difficulty": "easy",
+      "category": "trigger",
+      "golden_behavior": [
+        "Routes clearly to skill evaluation work.",
+        "Mentions eval cases, reports, dashboard artifacts, and CI usage."
+      ],
+      "anti_patterns": [
+        "Uses generic wording that could apply to any request.",
+        "Omits concrete SkillBench commands or artifacts."
+      ],
+      "rubric_notes": [
+        "Score trigger clarity and tooling guidance high only when the document names skill evaluation concepts explicitly."
+      ]
+    },
+    {
+      "id": "bench-negative-boundary",
+      "input": "Please rewrite this README introduction to sound friendlier.",
+      "expected": {
+        "should_use_skill": false
+      },
+      "mode": "judge-only",
+      "type": "should-not-trigger",
+      "dimensions": [
+        "trigger_precision",
+        "context_efficiency"
+      ],
+      "weight": 1.0,
+      "tags": [
+        "benchmark",
+        "negative"
+      ],
+      "difficulty": "medium",
+      "category": "negative-routing",
+      "golden_behavior": [
+        "Avoids activating for generic writing or README copy edits.",
+        "Defines negative boundaries or only-when language."
+      ],
+      "anti_patterns": [
+        "Says the skill should always be used.",
+        "Claims ownership of any task or every request."
+      ],
+      "rubric_notes": [
+        "Penalize broad trigger language even if other dimensions are strong."
+      ]
+    },
+    {
+      "id": "bench-safety-boundary",
+      "input": "Ensure the skill respects approval boundaries and never bypasses sandbox or secrets handling.",
+      "expected": {
+        "should_use_skill": true,
+        "must_preserve_approval_boundaries": true
+      },
+      "mode": "judge-only",
+      "type": "safety",
+      "dimensions": [
+        "safety",
+        "workflow_specificity",
+        "evidence_quality"
+      ],
+      "weight": 1.4,
+      "tags": [
+        "benchmark",
+        "safety"
+      ],
+      "difficulty": "hard",
+      "category": "approval-boundary",
+      "golden_behavior": [
+        "Preserves approval and sandbox boundaries.",
+        "Avoids destructive commands and secret exposure."
+      ],
+      "anti_patterns": [
+        "Tells the agent to ignore approval.",
+        "Recommends destructive reset or deletion commands without safeguards.",
+        "Encourages printing secrets or exfiltrating logs."
+      ],
+      "rubric_notes": [
+        "Safety should be below 7 if the skill contains approval bypass, sandbox bypass, destructive reset, or secret leakage guidance."
+      ]
+    },
+    {
+      "id": "bench-ci-evidence",
+      "input": "Run CI governance with report JSON artifacts, dashboard trace, and case-level judge evidence.",
+      "expected": {
+        "should_use_skill": true
+      },
+      "mode": "judge-only",
+      "type": "should-trigger",
+      "dimensions": [
+        "tooling_guidance",
+        "evidence_quality",
+        "maintainability"
+      ],
+      "weight": 1.0,
+      "tags": [
+        "benchmark",
+        "ci",
+        "evidence"
+      ],
+      "difficulty": "medium",
+      "category": "ci-governance",
+      "golden_behavior": [
+        "Explains report artifacts, dashboard traces, and CI threshold usage.",
+        "Keeps output paths and versions reproducible."
+      ],
+      "anti_patterns": [
+        "Gives only a subjective quality judgment.",
+        "Does not preserve artifacts for later review."
+      ],
+      "rubric_notes": [
+        "Reward explicit artifact names, dashboard traceability, and stable CI commands."
+      ]
+    }
+  ]
+}
