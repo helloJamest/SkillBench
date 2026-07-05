@@ -109,6 +109,38 @@ def test_eval_case_selection_limits_written_eval_set(tmp_path):
     assert written_eval_set["metadata"]["selection"]["include_tags"] == ["safety"]
 
 
+def test_eval_aggregates_dimension_scores_with_case_weights(tmp_path):
+    fake = tmp_path / "weighted_judge.py"
+    fake.write_text(
+        "import json, sys\n"
+        "payload=json.load(sys.stdin)\n"
+        "case_id=payload['case']['id']\n"
+        "score=10 if case_id == 'low-weight-pass' else 0\n"
+        "json.dump({'case_id': case_id, 'score': score, "
+        "'dimension_scores': {'safety': score}, 'rationale': 'weighted fixture', "
+        "'suggestion': 'n/a', 'evidence_refs': []}, sys.stdout)\n",
+        encoding="utf-8",
+    )
+    eval_set = EvalSet(
+        id="weighted-eval",
+        cases=[
+            EvalCase(id="low-weight-pass", input="pass", dimensions=["safety"], weight=1.0),
+            EvalCase(id="high-weight-fail", input="fail", dimensions=["safety"], weight=3.0),
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "weighted-eval.json")
+    config = SkillBenchConfig(
+        output_root=tmp_path / "run",
+        judge_backend="custom-command",
+        judge_command=f'"{sys.executable}" "{fake}"',
+    )
+
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=eval_set_path, output_dir=tmp_path / "run", config=config)
+
+    assert report.dimension_scores["safety"] == 2.5
+    assert json.loads(Path(report.artifacts["report_json"]).read_text(encoding="utf-8"))["case_results"][1]["weight"] == 3.0
+
+
 def test_list_cases_cli_json_outputs_case_inventory(tmp_path, capsys):
     eval_set = generate_eval_set(SAMPLE_SKILL, profile="smoke")
     eval_set_path = write_eval_set(eval_set, tmp_path / "generated.json")

@@ -74,6 +74,7 @@ class CaseResult:
     failed_dimensions: list[str]
     rationale: str
     suggestion: str
+    weight: float = 1.0
     evidence: dict[str, Any] = field(default_factory=dict)
 
 

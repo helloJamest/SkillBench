@@ -119,6 +119,7 @@ def run_evaluation(
             result = agent_runner.run_case(skill_text, active_case, run_dir)
         else:
             result = doc_runner.run_case(skill_text, active_case)
+        result.weight = active_case.weight
         _write_judge_artifacts(run_dir, skill_text, active_case, result, candidate_id)
         case_results.append(result)
 
@@ -211,7 +212,10 @@ def aggregate_dimensions(case_results: Iterable) -> dict[str, float]:
     totals: dict[str, float] = {}
     weights: dict[str, float] = {}
     for result in case_results:
+        weight = max(0.0, float(getattr(result, "weight", 1.0) or 0.0))
+        if weight == 0.0:
+            continue
         for dimension, score in result.dimension_scores.items():
-            totals[dimension] = totals.get(dimension, 0.0) + score
-            weights[dimension] = weights.get(dimension, 0.0) + 1.0
+            totals[dimension] = totals.get(dimension, 0.0) + (score * weight)
+            weights[dimension] = weights.get(dimension, 0.0) + weight
     return {dimension: round(totals[dimension] / weights[dimension], 3) for dimension in sorted(totals)}

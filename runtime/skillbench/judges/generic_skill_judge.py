@@ -45,6 +45,7 @@ class GenericSkillJudge:
             failed_dimensions=failed,
             rationale=rationale,
             suggestion=suggestion,
+            weight=case.weight,
             evidence=evidence,
         )
 

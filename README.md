@@ -1,5 +1,9 @@
 # SkillBench
 
+[![CI](https://github.com/helloJamest/SkillBench/actions/workflows/ci.yml/badge.svg)](https://github.com/helloJamest/SkillBench/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 SkillBench is an evaluation and evolution framework for Codex skills. It generates or loads eval cases, scores `SKILL.md` quality with a judge-compatible rubric, records every case, and can run a GEPA-style optimization loop over candidate skill documents.
 
 ## What It Produces
@@ -12,29 +16,27 @@ Each `skillbench evo` run produces:
 
 ## Quick Start
 
-Install into a stable local runtime:
+From the repository root:
 
 ```bash
-./scripts/install.sh
+python -m pip install -e ".[dev,dashboard]"
+skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
+skillbench report .skillbench/runs/latest
 ```
 
-On Windows:
+Start the local dashboard for the latest run:
+
+```bash
+skillbench dashboard .skillbench/runs/latest
+```
+
+Then open `http://127.0.0.1:8765`.
+
+For a Codex plugin checkout that is not installed as a package, set `PYTHONPATH` to the runtime directory:
 
 ```powershell
-.\scripts\install.ps1
-```
-
-```bash
-python -m skillbench eval ./skills/my-skill/SKILL.md --eval-set ./evals/basic.json
-python -m skillbench evo ./skills/my-skill/SKILL.md --rounds 3
-python -m skillbench dashboard .skillbench/runs/latest
-```
-
-When running from this plugin checkout, set `PYTHONPATH` to the runtime directory:
-
-```bash
-set PYTHONPATH=plugins\skillbench\runtime
-python -m skillbench eval plugins\skillbench\examples\skills\sample-skill\SKILL.md --eval-set plugins\skillbench\examples\eval_sets\basic-skill-eval.json
+$env:PYTHONPATH = "runtime"
+python -m skillbench eval examples\skills\sample-skill\SKILL.md --eval-set examples\eval_sets\basic-skill-eval.json
 ```
 
 ## Modes
@@ -53,7 +55,7 @@ Set the full-agent timeout with `--agent-timeout <seconds>` on `eval`, `ci`, or 
 
 ```powershell
 python -m skillbench eval `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --eval-set .skillbench\evals\sample-skill.json `
   --include-tag safety
 ```
@@ -71,10 +73,10 @@ The written `eval_set.json` records the applied selection metadata, so reports a
 ## Generate Eval Cases
 
 ```powershell
-$env:PYTHONPATH = "plugins\skillbench\runtime"
+$env:PYTHONPATH = "runtime"
 
 python -m skillbench generate-cases `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --profile smoke `
   --output .skillbench\evals\sample-skill.json
 ```
@@ -86,7 +88,7 @@ Validate an eval set before using it in CI:
 ```powershell
 python -m skillbench validate-cases `
   .skillbench\evals\sample-skill.json `
-  --skill-path plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  --skill-path examples\skills\sample-skill\SKILL.md `
   --require-hash-match `
   --json
 ```
@@ -113,7 +115,7 @@ The default backend is `local-heuristic` and requires no credentials:
 
 ```powershell
 python -m skillbench eval `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --judge-backend local-heuristic
 ```
 
@@ -121,10 +123,10 @@ Use `custom-command` to plug in a JSON judge. The command receives JSON on stdin
 
 ```powershell
 python -m skillbench eval `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --eval-set .skillbench\evals\sample-skill.json `
   --judge-backend custom-command `
-  --judge-command "python plugins\skillbench\examples\judges\fake_json_judge.py"
+  --judge-command "python examples\judges\fake_json_judge.py"
 ```
 
 If a custom judge exits non-zero, times out, returns invalid JSON, or misses required fields, SkillBench records a score-0 case result with `evidence.judge_error` instead of aborting the whole run.
@@ -133,7 +135,7 @@ If a custom judge exits non-zero, times out, returns invalid JSON, or misses req
 
 ```powershell
 python -m skillbench ci `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --eval-set .skillbench\evals\sample-skill.json `
   --min-score 8.5 `
   --min-safety 9.0 `
@@ -144,7 +146,7 @@ Regression gates compare the current run to a baseline report or run directory:
 
 ```powershell
 python -m skillbench ci `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --eval-set .skillbench\evals\sample-skill.json `
   --baseline .skillbench\runs\baseline `
   --fail-on-regression `
@@ -156,7 +158,7 @@ For GitHub code scanning or other SARIF-compatible tooling, also write SARIF:
 
 ```powershell
 python -m skillbench ci `
-  plugins\skillbench\examples\skills\sample-skill\SKILL.md `
+  examples\skills\sample-skill\SKILL.md `
   --eval-set .skillbench\evals\sample-skill.json `
   --min-score 8.5 `
   --sarif .skillbench\reports\skillbench.sarif

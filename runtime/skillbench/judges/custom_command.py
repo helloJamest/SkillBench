@@ -108,6 +108,7 @@ class CustomCommandJudge:
             failed_dimensions=data["failed_dimensions"],
             rationale=data["rationale"],
             suggestion=data["suggestion"],
+            weight=case.weight,
             evidence=result_evidence,
         )
 
@@ -149,6 +150,7 @@ def _failure_result(
         failed_dimensions=list(case.dimensions),
         rationale=f"Custom judge failed: {kind}. {message}",
         suggestion="Inspect judge_error stdout/stderr and fix the custom judge command or output schema.",
+        weight=case.weight,
         evidence=result_evidence,
     )
 
