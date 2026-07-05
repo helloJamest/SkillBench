@@ -12,6 +12,7 @@ from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
 from .observability.logging_io import read_json, resolve_run_dir
 from .reports import build_ci_result, build_comparison, write_ci_result, write_comparison, write_junit_xml, write_sarif_report
+from .runners import AGENT_RUNNERS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--comet", action="store_true")
     eval_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
     eval_parser.add_argument("--judge-command", default=None)
+    eval_parser.add_argument("--agent-runner", choices=AGENT_RUNNERS, default=None)
+    eval_parser.add_argument("--agent-command", default=None)
     eval_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     _add_case_selection_args(eval_parser)
 
@@ -54,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     evo_parser.add_argument("--comet", action="store_true")
     evo_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
     evo_parser.add_argument("--judge-command", default=None)
+    evo_parser.add_argument("--agent-runner", choices=AGENT_RUNNERS, default=None)
+    evo_parser.add_argument("--agent-command", default=None)
     evo_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     _add_case_selection_args(evo_parser)
 
@@ -65,6 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
     ci_parser.add_argument("--min-safety", type=float, default=7.0)
     ci_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
     ci_parser.add_argument("--judge-command", default=None)
+    ci_parser.add_argument("--agent-runner", choices=AGENT_RUNNERS, default=None)
+    ci_parser.add_argument("--agent-command", default=None)
     ci_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     ci_parser.add_argument("--json", action="store_true")
     ci_parser.add_argument("--baseline", help="Baseline report.json or run directory for regression checks.")
@@ -83,6 +90,8 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
     calibrate_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
     calibrate_parser.add_argument("--judge-command", default=None)
+    calibrate_parser.add_argument("--agent-runner", choices=AGENT_RUNNERS, default=None)
+    calibrate_parser.add_argument("--agent-command", default=None)
     calibrate_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     calibrate_parser.add_argument("--json", action="store_true")
     _add_case_selection_args(calibrate_parser)
@@ -160,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             config.judge_backend = args.judge_backend
         if args.judge_command:
             config.judge_command = args.judge_command
+        _apply_agent_args(config, args)
         if args.agent_timeout is not None:
             config.agent_timeout_sec = args.agent_timeout
         report = run_evaluation(
@@ -180,6 +190,7 @@ def main(argv: list[str] | None = None) -> int:
             config.judge_backend = args.judge_backend
         if args.judge_command:
             config.judge_command = args.judge_command
+        _apply_agent_args(config, args)
         if args.agent_timeout is not None:
             config.agent_timeout_sec = args.agent_timeout
         evolution = run_evolution(
@@ -201,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             config.judge_backend = args.judge_backend
         if args.judge_command:
             config.judge_command = args.judge_command
+        _apply_agent_args(config, args)
         if args.agent_timeout is not None:
             config.agent_timeout_sec = args.agent_timeout
         report = run_evaluation(
@@ -250,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
             config.judge_backend = args.judge_backend
         if args.judge_command:
             config.judge_command = args.judge_command
+        _apply_agent_args(config, args)
         if args.agent_timeout is not None:
             config.agent_timeout_sec = args.agent_timeout
         result = run_calibration(
@@ -362,6 +375,13 @@ def _case_selection_kwargs(args: argparse.Namespace) -> dict:
         "case_mode": args.case_mode,
         "limit": args.limit,
     }
+
+
+def _apply_agent_args(config: SkillBenchConfig, args: argparse.Namespace) -> None:
+    if getattr(args, "agent_runner", None):
+        config.agent_runner = args.agent_runner
+    if getattr(args, "agent_command", None):
+        config.agent_command = args.agent_command
 
 
 def _case_inventory(eval_set) -> dict:

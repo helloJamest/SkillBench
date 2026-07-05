@@ -19,7 +19,7 @@ from skillbench.calibrate import run_calibration
 from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
 from skillbench.judges import build_judge_backend
-from skillbench.runners import FullAgentRunner
+from skillbench.runners import FullAgentRunner, build_agent_adapter
 from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_sarif_report
 from skillbench.schemas import EvalCase, EvalSet
 
@@ -399,6 +399,36 @@ def test_dashboard_case_detail_renders_full_agent_artifacts(tmp_path):
     assert "artifact.txt" in html
 
 
+def test_dashboard_case_detail_renders_agent_audit_artifact(tmp_path):
+    command = (
+        f'"{sys.executable}" -c '
+        '"from pathlib import Path; Path(\'artifact.txt\').write_text(\'agent file\', encoding=\'utf-8\'); '
+        'print(\'stdout-marker\')"'
+    )
+    eval_set = EvalSet(
+        id="agent-audit-dashboard-eval",
+        cases=[
+            EvalCase(
+                id="agent-audit-dashboard-case",
+                mode="full-agent",
+                type="behavior",
+                input="collect audit artifacts",
+                dimensions=["evidence_quality", "safety"],
+            )
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "agent-audit-dashboard-eval.json")
+    config = SkillBenchConfig(output_root=tmp_path / "runs", agent_command=command)
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=eval_set_path, output_dir=tmp_path / "runs", config=config)
+    run_dir = Path(report.artifacts["report_json"]).parent
+
+    html = render_dashboard_html(run_dir / "cases" / "agent-audit-dashboard-case")
+
+    assert "Agent Audit" in html
+    assert "skillbench.agent-audit.v1" in html
+    assert "agent_stdout" in html
+
+
 def test_dashboard_case_detail_renders_custom_judge_error(tmp_path):
     bad_judge = tmp_path / "bad_judge.py"
     bad_judge.write_text("print('not json')\n", encoding="utf-8")
@@ -516,6 +546,70 @@ def test_full_agent_runner_records_file_evidence(tmp_path):
     assert (run_dir / "files.json").exists()
 
 
+def test_full_agent_runner_writes_normalized_agent_audit(tmp_path):
+    command = (
+        f'"{sys.executable}" -c '
+        '"from pathlib import Path; import sys; '
+        'Path(\'artifact.txt\').write_text(\'agent file\', encoding=\'utf-8\'); '
+        'print(\'stdout-marker\'); print(\'stderr-marker\', file=sys.stderr)"'
+    )
+    case = EvalCase(
+        id="agent-audit",
+        mode="full-agent",
+        type="behavior",
+        input="write an audited artifact",
+        dimensions=["evidence_quality", "safety"],
+    )
+
+    result = FullAgentRunner(command=command, runner_name="codex-cli").run_case(
+        SAMPLE_SKILL.read_text(encoding="utf-8"),
+        case,
+        tmp_path,
+    )
+
+    behavior = result.evidence["behavior"]
+    audit_path = Path(behavior["workdir"]) / "agent_audit.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert behavior["runner_name"] == "codex-cli"
+    assert behavior["status"] == "success"
+    assert behavior["elapsed_sec"] >= 0
+    assert behavior["agent_artifacts"]["audit"] == str(Path("agent_runs") / "agent-audit" / "agent_audit.json")
+    assert audit["schema_version"] == "skillbench.agent-audit.v1"
+    assert audit["runner"]["name"] == "codex-cli"
+    assert audit["runner"]["configured"] is True
+    assert audit["status"] == "success"
+    assert [entry["role"] for entry in audit["transcript"]] == ["user", "agent_stdout", "agent_stderr"]
+    assert {"path": "artifact.txt", "size": 10} in audit["files"]
+
+
+def test_full_agent_runner_writes_not_configured_audit(tmp_path, monkeypatch):
+    monkeypatch.delenv("SKILLBENCH_AGENT_COMMAND", raising=False)
+    monkeypatch.delenv("SKILLBENCH_CLAUDE_COMMAND", raising=False)
+    case = EvalCase(
+        id="agent-not-configured",
+        mode="full-agent",
+        type="behavior",
+        input="needs a configured runner",
+        dimensions=["evidence_quality", "safety"],
+    )
+
+    result = FullAgentRunner(command=None, runner_name="claude-cli").run_case(
+        SAMPLE_SKILL.read_text(encoding="utf-8"),
+        case,
+        tmp_path,
+    )
+
+    behavior = result.evidence["behavior"]
+    audit_path = Path(behavior["workdir"]) / "agent_audit.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert behavior["runner_name"] == "claude-cli"
+    assert behavior["status"] == "not-configured"
+    assert behavior["agent_artifacts"]["audit"] == str(Path("agent_runs") / "agent-not-configured" / "agent_audit.json")
+    assert audit["runner"]["configured"] is False
+    assert audit["status"] == "not-configured"
+    assert "SKILLBENCH_AGENT_COMMAND" in audit["diagnostics"][0]
+
+
 def test_full_agent_runner_records_timeout_evidence(tmp_path):
     command = f'"{sys.executable}" -c "import time; time.sleep(2)"'
     case = EvalCase(
@@ -561,6 +655,63 @@ def test_evaluation_uses_configured_full_agent_timeout(tmp_path):
     behavior = report.case_results[0].evidence["behavior"]
     assert behavior["timed_out"] is True
     assert behavior["returncode"] is None
+
+
+def test_agent_adapter_resolves_named_runner_without_default_command(monkeypatch):
+    monkeypatch.delenv("SKILLBENCH_AGENT_COMMAND", raising=False)
+    monkeypatch.delenv("SKILLBENCH_CODEX_COMMAND", raising=False)
+    adapter = build_agent_adapter("codex-cli", None)
+
+    assert adapter.name == "codex-cli"
+    assert adapter.command is None
+    assert adapter.configured is False
+    assert "SKILLBENCH_CODEX_COMMAND" in adapter.reason
+
+
+def test_eval_cli_accepts_agent_runner_and_command(tmp_path, capsys):
+    command = (
+        f'"{sys.executable}" -c '
+        '"from pathlib import Path; Path(\'artifact.txt\').write_text(\'agent file\', encoding=\'utf-8\'); '
+        'print(\'stdout-marker\')"'
+    )
+    eval_set = EvalSet(
+        id="cli-agent-runner-eval",
+        cases=[
+            EvalCase(
+                id="cli-agent-runner-case",
+                mode="full-agent",
+                type="behavior",
+                input="run through cli adapter",
+                dimensions=["evidence_quality", "safety"],
+            )
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "cli-agent-runner-eval.json")
+
+    exit_code = skillbench_main(
+        [
+            "eval",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(eval_set_path),
+            "--output-dir",
+            str(tmp_path / "runs"),
+            "--mode",
+            "full-agent",
+            "--agent-runner",
+            "codex-cli",
+            "--agent-command",
+            command,
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    report = json.loads(Path(data["report"]).read_text(encoding="utf-8"))
+    behavior = report["case_results"][0]["evidence"]["behavior"]
+    assert exit_code == 0
+    assert behavior["runner_name"] == "codex-cli"
+    assert behavior["status"] == "success"
+    assert behavior["agent_artifacts"]["audit"].endswith("agent_audit.json")
 
 
 def test_custom_command_judge_returns_case_result(tmp_path):

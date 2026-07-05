@@ -18,7 +18,7 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 
 ## v0.3.x: Full-Agent Auditing
 
-- Add first-class adapters for common agent runners while keeping `custom-command` support.
-- Normalize transcripts, touched files, command logs, elapsed time, and optional cost metadata.
+- v0.3.0 shipped first-class runner adapter metadata for `custom-command`, `codex-cli`, and `claude-cli` while keeping explicit command execution.
+- v0.3.0 shipped normalized `agent_audit.json` with transcripts, touched files, command logs, status, and elapsed time.
 - Strengthen dashboard filtering, run comparison, evolution timelines, and raw artifact browsing.
 - Provide CI examples that comment SkillBench summaries on pull requests.

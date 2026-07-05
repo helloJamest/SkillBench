@@ -46,9 +46,20 @@ python -m skillbench eval examples\skills\sample-skill\SKILL.md --eval-set examp
 - `full-agent`: Runs a configured agent command, captures evidence, then judges the behavior.
 - `evo`: Runs select, execute, reflect, mutate, and accept over a candidate pool.
 
-In `full-agent` mode, command timeouts are recorded as case evidence instead of aborting the whole run. The case directory still contains `stdout.txt`, `stderr.txt`, `exit_code.txt`, and `files.json`; `exit_code.txt` is set to `timeout`.
+In `full-agent` mode, command timeouts are recorded as case evidence instead of aborting the whole run. The case directory still contains `stdout.txt`, `stderr.txt`, `exit_code.txt`, `files.json`, and `agent_audit.json`; `exit_code.txt` is set to `timeout`.
 
 Set the full-agent timeout with `--agent-timeout <seconds>` on `eval`, `ci`, or `evo`, or with `SKILLBENCH_AGENT_TIMEOUT_SEC`.
+
+Choose an audit adapter with `--agent-runner custom-command|codex-cli|claude-cli`. SkillBench does not guess unsafe default commands for external CLIs; provide a command with `--agent-command`, `SKILLBENCH_AGENT_COMMAND`, `SKILLBENCH_CODEX_COMMAND`, or `SKILLBENCH_CLAUDE_COMMAND`. The command receives the case input on stdin.
+
+```powershell
+python -m skillbench eval `
+  examples\skills\sample-skill\SKILL.md `
+  --eval-set examples\eval_sets\basic-skill-eval.json `
+  --mode full-agent `
+  --agent-runner codex-cli `
+  --agent-command "python path\to\safe_agent_harness.py"
+```
 
 ## Case Selection
 
@@ -238,6 +249,7 @@ Every eval run writes:
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
 - `agent_runs/<case_id>/...` for full-agent cases
+- `agent_runs/<case_id>/agent_audit.json` with runner name, status, elapsed time, transcript, command, files, and artifact links
 
 The dashboard reads these files directly and does not recompute scores.
 Case detail pages also render full-agent command, stdout, stderr, exit code, and produced file lists when `agent_runs/<case_id>/` artifacts exist.

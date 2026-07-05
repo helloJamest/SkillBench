@@ -23,7 +23,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `dashboard`: serve case-level traceability for a run.
    - `export-dashboard`: write static HTML pages for a run.
 3. Prefer an explicit eval set when the user provides one. Otherwise use SkillBench's default case generator.
-4. Use `judge-only` for fast regression. Use `full-agent` only when the user needs behavior evidence from a real agent run and a safe agent command is configured. Use `--agent-timeout` or `SKILLBENCH_AGENT_TIMEOUT_SEC` to bound full-agent commands.
+4. Use `judge-only` for fast regression. Use `full-agent` only when the user needs behavior evidence from a real agent run and a safe agent command is configured. Use `--agent-runner custom-command|codex-cli|claude-cli` for audit metadata, `--agent-command` or runner environment variables for execution, and `--agent-timeout` or `SKILLBENCH_AGENT_TIMEOUT_SEC` to bound full-agent commands.
 5. Preserve all generated artifacts under `.skillbench/runs/` unless the user asks for another output directory.
 6. For focused checks, pass case selection filters to `eval`, `ci`, or `evo`: `--case-id`, `--include-tag`, `--exclude-tag`, `--case-mode`, and `--limit`.
 7. If a full-agent case times out, inspect the recorded `agent_runs/<case_id>/` artifacts; SkillBench records the timeout as evidence instead of treating it as a framework crash.
@@ -63,6 +63,7 @@ Every eval/evo run should produce:
 - `case_results.jsonl`
 - dimension-level `dimension_attributions` in case results and judge output artifacts
 - candidate snapshots
+- normalized `agent_audit.json` for each full-agent case
 - optional `reflection.json` and mutation records
 - `comet_offline.jsonl` when Comet ML is unavailable
 - `ci_result.json` when using CI gates

@@ -11,6 +11,7 @@ class SkillBenchConfig:
     output_root: Path
     judge_backend: str = "local-heuristic"
     judge_command: str | None = None
+    agent_runner: str = "custom-command"
     agent_command: str | None = None
     agent_timeout_sec: float = 300.0
     comet_enabled: bool = False
@@ -29,6 +30,7 @@ class SkillBenchConfig:
             output_root=root,
             judge_backend=os.environ.get("SKILLBENCH_JUDGE_BACKEND", "local-heuristic"),
             judge_command=os.environ.get("SKILLBENCH_JUDGE_COMMAND"),
+            agent_runner=os.environ.get("SKILLBENCH_AGENT_RUNNER", "custom-command"),
             agent_command=os.environ.get("SKILLBENCH_AGENT_COMMAND"),
             agent_timeout_sec=float(os.environ.get("SKILLBENCH_AGENT_TIMEOUT_SEC", "300")),
             comet_enabled=os.environ.get("SKILLBENCH_COMET", "").lower() in {"1", "true", "yes"},

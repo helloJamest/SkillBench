@@ -320,21 +320,25 @@ def _agent_html(run_path: Path, evidence_data: dict) -> str:
     stderr = _read_artifact(run_path, artifacts.get("stderr"))
     exit_code = _read_artifact(run_path, artifacts.get("exit_code"))
     files = _read_artifact(run_path, artifacts.get("files"))
+    audit = _read_artifact(run_path, artifacts.get("audit"))
     command_html = _artifact_pre(command)
     stdout_html = html.escape(str(stdout or ""))
     stderr_html = html.escape(str(stderr or ""))
     exit_code_html = html.escape(str(exit_code or ""))
     files_html = _artifact_pre(files)
+    audit_html = _artifact_pre(audit)
     return f"""
     <section>
       <h2>Agent Run</h2>
       <p>Directory: <code>{html.escape(str(behavior.get('agent_run_dir', '')))}</code></p>
-      <p>Return code: <code>{html.escape(str(behavior.get('returncode')))}</code> Timed out: <code>{html.escape(str(behavior.get('timed_out', False)))}</code></p>
+      <p>Runner: <code>{html.escape(str(behavior.get('runner_name', 'custom-command')))}</code> Status: <code>{html.escape(str(behavior.get('status', 'unknown')))}</code></p>
+      <p>Return code: <code>{html.escape(str(behavior.get('returncode')))}</code> Timed out: <code>{html.escape(str(behavior.get('timed_out', False)))}</code> Elapsed: <code>{html.escape(str(behavior.get('elapsed_sec', 0)))}</code>s</p>
       <h3>Agent Command</h3><pre>{command_html}</pre>
       <h3>Agent Stdout</h3><pre>{stdout_html}</pre>
       <h3>Agent Stderr</h3><pre>{stderr_html}</pre>
       <h3>Agent Exit Code</h3><pre>{exit_code_html}</pre>
       <h3>Agent Files</h3><pre>{files_html}</pre>
+      <h3>Agent Audit</h3><pre>{audit_html}</pre>
     </section>
     """
 

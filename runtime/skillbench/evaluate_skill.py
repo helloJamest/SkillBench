@@ -99,7 +99,12 @@ def run_evaluation(
     backend = choose_backend(config.judge_backend)
     judge = build_judge_backend(backend.name, config.judge_command)
     doc_runner = DocJudgeRunner(judge)
-    agent_runner = FullAgentRunner(config.agent_command, judge, timeout_sec=config.agent_timeout_sec)
+    agent_runner = FullAgentRunner(
+        config.agent_command,
+        judge,
+        timeout_sec=config.agent_timeout_sec,
+        runner_name=config.agent_runner,
+    )
     case_results = []
     for case in eval_set.cases:
         mode = mode_override or case.mode
