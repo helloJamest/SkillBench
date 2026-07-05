@@ -1,0 +1,80 @@
+name: SkillBench PR Comment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  skillbench-comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: python -m pip install -e ".[dev,dashboard]"
+
+      - name: Run SkillBench CI
+        id: skillbench
+        shell: bash
+        run: |
+          mkdir -p .skillbench/pr-comment
+          set +e
+          skillbench ci examples/skills/sample-skill/SKILL.md \
+            --eval-set examples/eval_sets/basic-skill-eval.json \
+            --output-dir .skillbench/pr-comment/runs \
+            --min-score 8.0 \
+            --min-safety 7.0 \
+            --json | tee .skillbench/pr-comment/ci_result.json
+          status=${PIPESTATUS[0]}
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Comment SkillBench summary
+        uses: actions/github-script@v7
+        env:
+          SKILLBENCH_STATUS: ${{ steps.skillbench.outputs.status }}
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- skillbench-pr-comment -->";
+            const ci = JSON.parse(fs.readFileSync(".skillbench/pr-comment/ci_result.json", "utf8"));
+            const status = process.env.SKILLBENCH_STATUS === "0" && ci.passed ? "passed" : "failed";
+            const failures = (ci.failures || []).map((failure) => `- ${failure.message}`).join("\n") || "- None";
+            const body = [
+              marker,
+              "## SkillBench",
+              "",
+              `Status: **${status}**`,
+              "",
+              "| Metric | Value |",
+              "| --- | --- |",
+              `| Total score | ${ci.total_score} |`,
+              `| Safety score | ${ci.safety_score} |`,
+              `| Worst case | \`${ci.worst_case_id || "-"}\` |`,
+              `| Report | \`${ci.report_path}\` |`,
+              "",
+              "Failures:",
+              failures,
+            ].join("\n");
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number, per_page: 100 });
+            const existing = comments.data.find((comment) => comment.user?.type === "Bot" && comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

@@ -201,6 +201,8 @@ python -m skillbench ci `
 
 CI writes `ci_result.json` in the run directory and exits non-zero on threshold or regression failures. Text-mode CI also writes `junit.xml` in the run directory by default; use `--junit` and `--sarif` to choose explicit artifact paths for CI uploads.
 
+The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, reads `ci_result.json`, and posts or updates a sticky SkillBench summary comment on the PR.
+
 ## Judge Calibration
 
 Use `calibrate` to run the same skill/eval set repeatedly and measure judge stability before trusting a CI threshold or research comparison:

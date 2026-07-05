@@ -68,6 +68,7 @@ Every eval/evo run should produce:
 - `comet_offline.jsonl` when Comet ML is unavailable
 - `ci_result.json` when using CI gates
 - SARIF output when `ci --sarif <path>` is requested
+- `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow for CI summaries
 - `comparison.json` when comparing runs
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

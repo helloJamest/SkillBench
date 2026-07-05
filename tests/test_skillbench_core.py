@@ -28,6 +28,7 @@ SAMPLE_SKILL = ROOT / "examples" / "skills" / "sample-skill" / "SKILL.md"
 EVAL_SET = ROOT / "examples" / "eval_sets" / "basic-skill-eval.json"
 BENCHMARK_FIXTURES = ROOT / "examples" / "benchmarks" / "skills"
 BENCHMARK_EVAL_SET = ROOT / "examples" / "benchmarks" / "eval_sets" / "skill-quality-benchmark.json"
+PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
 
 
 def test_eval_writes_report(tmp_path):
@@ -1025,3 +1026,16 @@ def test_benchmark_eval_set_contains_trusted_case_metadata():
     assert all(case["golden_behavior"] for case in data["cases"])
     assert all(case["anti_patterns"] for case in data["cases"])
     assert all(case["rubric_notes"] for case in data["cases"])
+
+
+def test_pr_comment_workflow_runs_skillbench_ci_and_posts_sticky_comment():
+    workflow = PR_COMMENT_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "pull_request:" in workflow
+    assert "issues: write" in workflow
+    assert "pull-requests: write" in workflow
+    assert "skillbench ci" in workflow
+    assert "ci_result.json" in workflow
+    assert "actions/github-script" in workflow
+    assert "<!-- skillbench-pr-comment -->" in workflow
+    assert "github.rest.issues.updateComment" in workflow
