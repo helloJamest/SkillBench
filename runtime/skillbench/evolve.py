@@ -9,6 +9,7 @@ from .observability.comet_logger import CometLogger
 from .observability.logging_io import ensure_dir, update_latest_pointer, write_json
 from .optimizers import AcceptPolicy, CandidatePool
 from .optimizers.gepa_adapter import GepaAdapter
+from .reports.timeline import build_evolution_timeline, write_evolution_timeline
 from .schemas import EvolutionReport, EvolutionStep, Reflection
 
 
@@ -127,6 +128,7 @@ def run_evolution(
         comet.log_asset(mutation_path)
 
     best = pool.select()
+    timeline_path = run_dir / "timeline.json"
     evolution = EvolutionReport(
         run_id=run_id,
         skill_path=str(skill_file),
@@ -137,9 +139,13 @@ def run_evolution(
         artifacts={
             "evolution_json": str(run_dir / "evolution.json"),
             "candidates_json": str(run_dir / "candidates.json"),
+            "timeline_json": str(timeline_path),
         },
     )
+    timeline = build_evolution_timeline(evolution, run_dir)
+    write_evolution_timeline(timeline, timeline_path)
     evolution_path = write_json(run_dir / "evolution.json", evolution)
+    comet.log_asset(timeline_path)
     comet.log_asset(evolution_path)
     comet.end()
     return evolution

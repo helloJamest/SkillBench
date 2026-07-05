@@ -281,6 +281,29 @@ def test_evolution_records_candidates_and_steps(tmp_path):
     assert data["best_candidate_id"].startswith("candidate_")
 
 
+def test_evolution_writes_timeline_artifact(tmp_path):
+    evolution = run_evolution(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path, rounds=1)
+
+    timeline_path = Path(evolution.artifacts["timeline_json"])
+    assert timeline_path.exists()
+    data = json.loads(timeline_path.read_text(encoding="utf-8"))
+    assert data["run_id"] == evolution.run_id
+    assert data["best_candidate_id"] == evolution.best_candidate_id
+    assert len(data["rounds"]) == 1
+    round0 = data["rounds"][0]
+    assert round0["round_index"] == 0
+    assert round0["selected_candidate_id"] == "candidate_000"
+    assert round0["mutated_candidate_id"].startswith("candidate_")
+    assert isinstance(round0["accepted"], bool)
+    assert isinstance(round0["score_delta"], float)
+    assert "selected_score" in round0
+    assert "mutated_score" in round0
+    assert round0["reflection_summary"]
+    assert round0["mutation_summary"]
+    assert round0["decision_reasons"]
+    assert round0["report_path"].endswith("report.json")
+
+
 def test_dashboard_renders_evolution_round_detail(tmp_path):
     evolution = run_evolution(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path, rounds=1)
     run_dir = Path(evolution.artifacts["evolution_json"]).parent
@@ -292,6 +315,18 @@ def test_dashboard_renders_evolution_round_detail(tmp_path):
     assert "Decision" in html
 
 
+def test_dashboard_renders_evolution_timeline(tmp_path):
+    evolution = run_evolution(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path, rounds=1)
+    run_dir = Path(evolution.artifacts["evolution_json"]).parent
+
+    html = render_dashboard_html(run_dir / "timeline")
+
+    assert "SkillBench Evolution Timeline" in html
+    assert "Round 0" in html
+    assert "candidate_000" in html
+    assert "Decision Reasons" in html
+
+
 def test_export_dashboard_writes_evolution_round_pages(tmp_path):
     evolution = run_evolution(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "evo", rounds=1)
     run_dir = Path(evolution.artifacts["evolution_json"]).parent
@@ -301,6 +336,16 @@ def test_export_dashboard_writes_evolution_round_pages(tmp_path):
     round_page = tmp_path / "evo-site" / "evolution" / "rounds" / "0" / "index.html"
     assert round_page.exists()
     assert "Evolution Round 0" in round_page.read_text(encoding="utf-8")
+
+
+def test_export_dashboard_writes_evolution_timeline_page(tmp_path):
+    evolution = run_evolution(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "evo", rounds=1)
+    run_dir = Path(evolution.artifacts["evolution_json"]).parent
+    manifest = export_dashboard(run_dir, tmp_path / "evo-site")
+
+    assert "timeline/index.html" in manifest["pages"]
+    timeline_page = tmp_path / "evo-site" / "timeline" / "index.html"
+    assert "SkillBench Evolution Timeline" in timeline_page.read_text(encoding="utf-8")
 
 
 def test_dashboard_renders_report(tmp_path):

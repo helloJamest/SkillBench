@@ -6,12 +6,14 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote
 
 from ..observability.logging_io import read_json, resolve_run_dir
+from ..reports.timeline import build_evolution_timeline
 
 
 def render_dashboard_html(run_dir: str | Path) -> str:
     requested_path, filters = _split_path_query(run_dir)
     route_case_id: str | None = None
     route_comparison = False
+    route_timeline = False
     route_round_index: int | None = None
     route_artifact: Path | None = None
     if "artifacts" in requested_path.parts:
@@ -21,6 +23,9 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         requested_path = Path(*parts[:artifact_index])
     if requested_path.name == "comparison" and not (requested_path / "report.json").exists() and not (requested_path / "evolution.json").exists():
         route_comparison = True
+        requested_path = requested_path.parent
+    if requested_path.name == "timeline" and not (requested_path / "report.json").exists() and not (requested_path / "evolution.json").exists():
+        route_timeline = True
         requested_path = requested_path.parent
     if len(requested_path.parts) >= 2 and requested_path.parts[-2] == "cases":
         route_case_id = requested_path.parts[-1]
@@ -39,6 +44,11 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         if comparison_path.exists():
             return _render_comparison(run_path, read_json(comparison_path))
         return _page("Comparison not found", "<p>No comparison.json found.</p>")
+    if route_timeline:
+        evolution_path = run_path / "evolution.json"
+        if evolution_path.exists():
+            return _render_timeline(run_path, _load_timeline(run_path, read_json(evolution_path)))
+        return _page("Timeline not found", "<p>No evolution.json found.</p>")
 
     report_path = run_path / "report.json"
     if not report_path.exists():
@@ -106,6 +116,13 @@ def create_app(run_dir: str | Path):
             return JSONResponse(data)
         return JSONResponse({"error": "round not found", "round_index": round_index}, status_code=404)
 
+    @app.get("/api/timeline")
+    def api_timeline():
+        evolution = run_path / "evolution.json"
+        if evolution.exists():
+            return JSONResponse(_load_timeline(run_path, read_json(evolution)))
+        return JSONResponse({"error": "evolution.json not found"}, status_code=404)
+
     @app.get("/api/comparison")
     def api_comparison():
         comparison = run_path / "comparison.json"
@@ -127,6 +144,13 @@ def create_app(run_dir: str | Path):
         if evolution.exists():
             return _render_evolution_round(run_path, read_json(evolution), round_index)
         return _page("Evolution not found", "<p>No evolution.json found.</p>")
+
+    @app.get("/timeline", response_class=HTMLResponse)
+    def timeline():
+        evolution = run_path / "evolution.json"
+        if evolution.exists():
+            return _render_timeline(run_path, _load_timeline(run_path, read_json(evolution)))
+        return _page("Timeline not found", "<p>No evolution.json found.</p>")
 
     @app.get("/comparison", response_class=HTMLResponse)
     def comparison():
@@ -245,6 +269,13 @@ def _format_number(value: object, signed: bool = False) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _load_timeline(run_path: Path, evolution: dict) -> dict:
+    timeline_path = run_path / "timeline.json"
+    if timeline_path.exists():
+        return read_json(timeline_path)
+    return build_evolution_timeline(evolution, run_path)
 
 
 def _split_path_query(value: str | Path) -> tuple[Path, dict[str, str]]:
@@ -416,11 +447,56 @@ def _render_evolution(run_path: Path, evolution: dict) -> str:
       <h2>{html.escape(evolution.get('run_id', 'evolution'))}</h2>
       <p>Best candidate <strong>{html.escape(evolution.get('best_candidate_id', ''))}</strong></p>
       <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/timeline">View evolution timeline</a></p>
     </section>
     <section><h2>Candidates</h2><table><tbody>{candidates}</tbody></table></section>
     <section><h2>GEPA Steps</h2><table><tbody>{steps}</tbody></table></section>
     """
     return _page("SkillBench Evolution", body)
+
+
+def _render_timeline(run_path: Path, timeline: dict) -> str:
+    rows = ""
+    for item in timeline.get("rounds", []):
+        round_index = int(item.get("round_index", 0))
+        reasons = item.get("decision_reasons") or []
+        rows += (
+            "<tr>"
+            f"<td><a href=\"/evolution/rounds/{round_index}\">Round {round_index}</a></td>"
+            f"<td>{html.escape(str(item.get('selected_candidate_id', '')))}</td>"
+            f"<td>{html.escape(str(item.get('mutated_candidate_id', '')))}</td>"
+            f"<td>{html.escape(_format_number(item.get('selected_score')))}</td>"
+            f"<td>{html.escape(_format_number(item.get('mutated_score')))}</td>"
+            f"<td>{html.escape(_format_number(item.get('score_delta'), signed=True))}</td>"
+            f"<td>{html.escape(str(item.get('accepted', False)))}</td>"
+            f"<td>{html.escape(str(item.get('worst_case_id', '')))}</td>"
+            f"<td>{html.escape(str(item.get('reflection_summary', '')))}</td>"
+            f"<td>{html.escape(str(item.get('mutation_summary', '')))}</td>"
+            f"<td>{html.escape('; '.join(str(reason) for reason in reasons))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        rows = "<tr><td colspan=\"11\">No evolution rounds found.</td></tr>"
+    raw_link = ""
+    if (run_path / "timeline.json").exists():
+        raw_link = '<p><a href="/artifacts/timeline.json">Open raw timeline.json</a></p>'
+    body = f"""
+    <p><a href="/">Back to evolution</a></p>
+    <section class="summary">
+      <h2>{html.escape(str(timeline.get('run_id', 'evolution')))}</h2>
+      <p>Best candidate <strong>{html.escape(str(timeline.get('best_candidate_id', '')))}</strong> Rounds <strong>{html.escape(str(timeline.get('round_count', len(timeline.get('rounds', [])))))}</strong></p>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      {raw_link}
+    </section>
+    <section>
+      <h2>Decision Timeline</h2>
+      <table>
+        <thead><tr><th>Round</th><th>Selected</th><th>Mutated</th><th>Selected Score</th><th>Mutated Score</th><th>Delta</th><th>Accepted</th><th>Worst Case</th><th>Reflection</th><th>Mutation</th><th>Decision Reasons</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </section>
+    """
+    return _page("SkillBench Evolution Timeline", body)
 
 
 def _render_evolution_round(run_path: Path, evolution: dict, round_index: int) -> str:

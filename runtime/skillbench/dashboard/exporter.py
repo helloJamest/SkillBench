@@ -36,6 +36,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
                 'href="../../../index.html">Back to evolution</a>',
             )
             _write_page(output / "evolution" / "rounds" / str(round_index) / "index.html", round_html, pages, output)
+        _write_timeline_page(run_path, evolution, output, pages)
         _write_artifact_pages(run_path, output, pages)
         _write_comparison_page(run_path, output, pages)
     else:
@@ -79,6 +80,20 @@ def _write_comparison_page(run_path: Path, output: Path, pages: list[str]) -> No
     _write_page(output / "comparison" / "index.html", comparison_html, pages, output)
 
 
+def _write_timeline_page(run_path: Path, evolution: dict[str, Any], output: Path, pages: list[str]) -> None:
+    if not (run_path / "evolution.json").exists():
+        return
+    timeline_html = render_dashboard_html(run_path / "timeline").replace('href="/">Back to evolution</a>', 'href="../index.html">Back to evolution</a>')
+    for step in evolution.get("steps", []):
+        round_index = str(step.get("round_index", "0"))
+        timeline_html = timeline_html.replace(
+            f'href="/evolution/rounds/{round_index}"',
+            f'href="../evolution/rounds/{round_index}/index.html"',
+        )
+    timeline_html = timeline_html.replace('href="/artifacts/timeline.json"', 'href="../artifacts/timeline.json/index.html"')
+    _write_page(output / "timeline" / "index.html", timeline_html, pages, output)
+
+
 def _rewrite_artifact_index(run_path: Path, html: str) -> str:
     html = html.replace('href="/">Back to report</a>', 'href="../index.html">Back to report</a>')
     for artifact in _iter_artifacts(run_path):
@@ -109,4 +124,5 @@ def _rewrite_evolution_index(html: str, evolution: dict[str, Any]) -> str:
             f'href="/evolution/rounds/{round_index}"',
             f'href="evolution/rounds/{round_index}/index.html"',
         )
+    html = html.replace('href="/timeline"', 'href="timeline/index.html"')
     return html

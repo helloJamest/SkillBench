@@ -12,7 +12,7 @@ Each `skillbench evo` run produces:
 
 - An eval set describing which cases validate the skill document.
 - A report with dimension scores, worst-case analysis, attribution, and suggestions.
-- A local dashboard and optional Comet ML experiment artifacts for traceability.
+- A local dashboard, evolution timeline, and optional Comet ML experiment artifacts for traceability.
 
 ## Quick Start
 
@@ -248,6 +248,7 @@ Every eval run writes:
 - `report.json`
 - `case_results.jsonl`
 - `summary.md`
+- `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
 - `agent_runs/<case_id>/...` for full-agent cases
@@ -258,6 +259,7 @@ Case detail pages also render full-agent command, stdout, stderr, exit code, and
 When a custom judge fails, the same page shows a dedicated `Judge Error` section with kind, return code, stdout, and stderr.
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
 The report page also includes case filters. You can combine query parameters such as `?failed=1&dimension=safety&type=safety&q=approval` to focus the case table while preserving the run summary.
+Evolution dashboards expose `/timeline` to trace each select, reflect, mutate, and accept round with selected/mutated candidates, scores, deltas, reflection summaries, mutation summaries, and decision reasons.
 
 Print a compact report for humans, or the persisted JSON for scripts:
 
@@ -275,7 +277,7 @@ python -m skillbench export-dashboard `
 ```
 
 Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
-Static exports include `artifacts/index.html`, raw artifact detail pages, and `comparison/index.html` when `comparison.json` exists.
+Static exports include `artifacts/index.html`, raw artifact detail pages, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
 
 ## Optional Integrations
 

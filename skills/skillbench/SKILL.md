@@ -63,6 +63,7 @@ Every eval/evo run should produce:
 - `case_results.jsonl`
 - dimension-level `dimension_attributions` in case results and judge output artifacts
 - candidate snapshots
+- `timeline.json` for `evo` runs, rendered at `/timeline` and exported as `timeline/index.html`
 - normalized `agent_audit.json` for each full-agent case
 - optional `reflection.json` and mutation records
 - `comet_offline.jsonl` when Comet ML is unavailable
@@ -74,4 +75,4 @@ Every eval/evo run should produce:
 - `benchmark.json` when running bundled quality fixtures
 - `manifest.json` and static HTML pages when exporting dashboards
 
-Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, and comparison deltas. Dashboard report pages include case filters, an artifact browser at `/artifacts`, and a comparison view when `comparison.json` exists.
+Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
