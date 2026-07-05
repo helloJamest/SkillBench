@@ -73,4 +73,4 @@ Every eval/evo run should produce:
 - `benchmark.json` when running bundled quality fixtures
 - `manifest.json` and static HTML pages when exporting dashboards
 
-Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, and judge suggestions.
+Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, and raw artifacts. Dashboard report pages include an artifact browser at `/artifacts`.

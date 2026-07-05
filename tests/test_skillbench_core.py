@@ -311,6 +311,31 @@ def test_dashboard_renders_report(tmp_path):
     assert "should-trigger-eval" in html
 
 
+def test_dashboard_artifact_index_lists_run_artifacts(tmp_path):
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
+    run_dir = Path(report.artifacts["report_json"]).parent
+
+    html = render_dashboard_html(run_dir / "artifacts")
+
+    assert "Raw Artifacts" in html
+    assert "report.json" in html
+    assert "case_results.jsonl" in html
+    assert "judge/should-trigger-eval.input.json" in html
+    assert "/artifacts/report.json" in html
+
+
+def test_dashboard_artifact_route_renders_raw_json(tmp_path):
+    report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
+    run_dir = Path(report.artifacts["report_json"]).parent
+
+    html = render_dashboard_html(run_dir / "artifacts" / "report.json")
+
+    assert "Raw Artifact" in html
+    assert "report.json" in html
+    assert "total_score" in html
+    assert "case_results" in html
+
+
 def test_dashboard_case_detail_route_reads_artifacts(tmp_path):
     report = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path)
     run_dir = Path(report.artifacts["report_json"]).parent
@@ -458,9 +483,13 @@ def test_export_dashboard_writes_static_report_pages(tmp_path):
     manifest = export_dashboard(run_dir, tmp_path / "site")
 
     assert "index.html" in manifest["pages"]
+    assert "artifacts/index.html" in manifest["pages"]
+    assert "artifacts/report.json/index.html" in manifest["pages"]
     first_case_page = tmp_path / "site" / "cases" / report.case_results[0].case_id / "index.html"
     assert first_case_page.exists()
     assert "Judge Input" in first_case_page.read_text(encoding="utf-8")
+    raw_report_page = tmp_path / "site" / "artifacts" / "report.json" / "index.html"
+    assert "Raw Artifact" in raw_report_page.read_text(encoding="utf-8")
 
 
 def test_export_dashboard_static_case_page_includes_full_agent_artifacts(tmp_path):

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from ..observability.logging_io import ensure_dir, read_json, resolve_run_dir, write_json
-from .app import render_dashboard_html
+from .app import _artifact_rel, _iter_artifacts, render_dashboard_html
 
 
 def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
@@ -22,6 +23,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
             case_id = str(case.get("case_id", "case"))
             case_html = render_dashboard_html(run_path / "cases" / case_id).replace('href="/">Back to report</a>', 'href="../../index.html">Back to report</a>')
             _write_page(output / "cases" / case_id / "index.html", case_html, pages, output)
+        _write_artifact_pages(run_path, output, pages)
     elif evolution_path.exists():
         evolution = read_json(evolution_path)
         index_html = _rewrite_evolution_index(render_dashboard_html(run_path), evolution)
@@ -33,6 +35,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
                 'href="../../../index.html">Back to evolution</a>',
             )
             _write_page(output / "evolution" / "rounds" / str(round_index) / "index.html", round_html, pages, output)
+        _write_artifact_pages(run_path, output, pages)
     else:
         raise FileNotFoundError(f"No report.json or evolution.json found in {run_path}")
 
@@ -48,7 +51,32 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
 def _write_page(path: Path, html: str, pages: list[str], root: Path) -> None:
     ensure_dir(path.parent)
     path.write_text(html, encoding="utf-8")
-    pages.append(str(path.relative_to(root)))
+    pages.append(path.relative_to(root).as_posix())
+
+
+def _write_artifact_pages(run_path: Path, output: Path, pages: list[str]) -> None:
+    index_html = _rewrite_artifact_index(run_path, render_dashboard_html(run_path / "artifacts"))
+    _write_page(output / "artifacts" / "index.html", index_html, pages, output)
+    for artifact in _iter_artifacts(run_path):
+        rel = _artifact_rel(run_path, artifact)
+        detail_html = render_dashboard_html(run_path / "artifacts" / Path(rel)).replace(
+            'href="/artifacts">Back to artifacts</a>',
+            f'href="{_artifact_back_href(rel)}">Back to artifacts</a>',
+        )
+        _write_page(output / "artifacts" / Path(rel) / "index.html", detail_html, pages, output)
+
+
+def _rewrite_artifact_index(run_path: Path, html: str) -> str:
+    html = html.replace('href="/">Back to report</a>', 'href="../index.html">Back to report</a>')
+    for artifact in _iter_artifacts(run_path):
+        rel = _artifact_rel(run_path, artifact)
+        html = html.replace(f'href="/artifacts/{quote(rel, safe="/")}"', f'href="{rel}/index.html"')
+    return html
+
+
+def _artifact_back_href(rel: str) -> str:
+    depth = len(Path(rel).parts)
+    return "../" * depth + "index.html"
 
 
 def _rewrite_report_index(html: str, report: dict[str, Any]) -> str:

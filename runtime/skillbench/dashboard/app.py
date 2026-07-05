@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
+from urllib.parse import quote
 
 from ..observability.logging_io import read_json, resolve_run_dir
 
@@ -11,6 +12,12 @@ def render_dashboard_html(run_dir: str | Path) -> str:
     requested_path = Path(run_dir)
     route_case_id: str | None = None
     route_round_index: int | None = None
+    route_artifact: Path | None = None
+    if "artifacts" in requested_path.parts:
+        parts = requested_path.parts
+        artifact_index = max(index for index, part in enumerate(parts) if part == "artifacts")
+        route_artifact = Path(*parts[artifact_index + 1 :]) if artifact_index + 1 < len(parts) else Path()
+        requested_path = Path(*parts[:artifact_index])
     if len(requested_path.parts) >= 2 and requested_path.parts[-2] == "cases":
         route_case_id = requested_path.parts[-1]
         requested_path = Path(*requested_path.parts[:-2])
@@ -19,6 +26,11 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         requested_path = Path(*requested_path.parts[:-3])
 
     run_path = resolve_run_dir(requested_path)
+    if route_artifact is not None:
+        if route_artifact == Path():
+            return _render_artifacts_index(run_path)
+        return _render_artifact(run_path, route_artifact)
+
     report_path = run_path / "report.json"
     if not report_path.exists():
         evolution_path = run_path / "evolution.json"
@@ -84,6 +96,14 @@ def create_app(run_dir: str | Path):
             return JSONResponse(data)
         return JSONResponse({"error": "round not found", "round_index": round_index}, status_code=404)
 
+    @app.get("/artifacts", response_class=HTMLResponse)
+    def artifacts_index():
+        return _render_artifacts_index(run_path)
+
+    @app.get("/artifacts/{artifact_path:path}", response_class=HTMLResponse)
+    def artifact_detail(artifact_path: str):
+        return _render_artifact(run_path, Path(artifact_path))
+
     @app.get("/evolution/rounds/{round_index}", response_class=HTMLResponse)
     def evolution_round(round_index: int):
         evolution = run_path / "evolution.json"
@@ -129,6 +149,7 @@ def _render_report(run_path: Path, report: dict) -> str:
       <h2>{html.escape(report.get('run_id', 'run'))}</h2>
       <p>Total <strong>{report.get('total_score')}</strong> Grade <strong>{html.escape(report.get('grade', ''))}</strong> Worst case <strong>{html.escape(str(report.get('worst_case_id')))}</strong></p>
       <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/artifacts">Browse raw artifacts</a></p>
     </section>
     <section>
       <h2>Dimension Scores</h2>
@@ -140,6 +161,71 @@ def _render_report(run_path: Path, report: dict) -> str:
     </section>
     """
     return _page("SkillBench Report", body)
+
+
+def _render_artifacts_index(run_path: Path) -> str:
+    rows = ""
+    for path in _iter_artifacts(run_path):
+        rel = _artifact_rel(run_path, path)
+        rows += (
+            "<tr>"
+            f"<td><a href=\"/artifacts/{quote(rel, safe='/')}\">{html.escape(rel)}</a></td>"
+            f"<td>{path.stat().st_size}</td>"
+            "</tr>"
+        )
+    if not rows:
+        rows = "<tr><td colspan=\"2\">No artifact files found.</td></tr>"
+    body = f"""
+    <p><a href="/">Back to report</a></p>
+    <section>
+      <h2>Raw Artifacts</h2>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <table><thead><tr><th>Artifact</th><th>Bytes</th></tr></thead><tbody>{rows}</tbody></table>
+    </section>
+    """
+    return _page("Raw Artifacts", body)
+
+
+def _render_artifact(run_path: Path, rel_path: Path) -> str:
+    target = _safe_artifact_path(run_path, rel_path)
+    rel = _artifact_rel(run_path, target)
+    try:
+        value = read_json(target)
+        text = json.dumps(value, indent=2, ensure_ascii=False)
+    except Exception:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    body = f"""
+    <p><a href="/artifacts">Back to artifacts</a></p>
+    <section>
+      <h2>Raw Artifact</h2>
+      <p>Path: <code>{html.escape(rel)}</code></p>
+      <p>Bytes: <code>{target.stat().st_size}</code></p>
+      <pre>{html.escape(text)}</pre>
+    </section>
+    """
+    return _page("Raw Artifact", body)
+
+
+def _iter_artifacts(run_path: Path) -> list[Path]:
+    if not run_path.exists():
+        return []
+    return sorted(path for path in run_path.rglob("*") if path.is_file())
+
+
+def _artifact_rel(run_path: Path, path: Path) -> str:
+    return path.relative_to(run_path).as_posix()
+
+
+def _safe_artifact_path(run_path: Path, rel_path: Path) -> Path:
+    if rel_path.is_absolute() or any(part in {"..", ""} for part in rel_path.parts):
+        raise FileNotFoundError(f"Artifact path is outside the run directory: {rel_path}")
+    root = run_path.resolve()
+    target = (run_path / rel_path).resolve()
+    if root != target and root not in target.parents:
+        raise FileNotFoundError(f"Artifact path is outside the run directory: {rel_path}")
+    if not target.exists() or not target.is_file():
+        raise FileNotFoundError(f"Artifact not found: {rel_path}")
+    return target
 
 
 def _render_evolution(run_path: Path, evolution: dict) -> str:
