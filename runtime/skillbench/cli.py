@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, render_eval_pack_comparison_markdown, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, evaluate_eval_pack_comparison_gate, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, render_eval_pack_comparison_markdown, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -71,6 +72,11 @@ def build_parser() -> argparse.ArgumentParser:
     pack_compare_parser.add_argument("right")
     pack_compare_parser.add_argument("--json", action="store_true")
     pack_compare_parser.add_argument("--output", help="Write Markdown comparison to this path instead of stdout.")
+    pack_compare_parser.add_argument("--fail-on-removed-tags", nargs="+", default=[], help="Fail when any listed tag is removed.")
+    pack_compare_parser.add_argument("--fail-on-removed-dimensions", nargs="+", default=[], help="Fail when any listed dimension is removed.")
+    pack_compare_parser.add_argument("--fail-on-removed-categories", nargs="+", default=[], help="Fail when any listed category is removed.")
+    pack_compare_parser.add_argument("--fail-on-removed-types", nargs="+", default=[], help="Fail when any listed type is removed.")
+    pack_compare_parser.add_argument("--fail-on-removed-modes", nargs="+", default=[], help="Fail when any listed mode is removed.")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -288,6 +294,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "pack-compare":
         comparison = compare_eval_packs(args.left, args.right)
+        gate = evaluate_eval_pack_comparison_gate(
+            comparison,
+            fail_on_removed_tags=args.fail_on_removed_tags,
+            fail_on_removed_dimensions=args.fail_on_removed_dimensions,
+            fail_on_removed_categories=args.fail_on_removed_categories,
+            fail_on_removed_types=args.fail_on_removed_types,
+            fail_on_removed_modes=args.fail_on_removed_modes,
+        )
+        gate_requested = _pack_compare_gate_requested(args)
+        if gate_requested:
+            comparison["gate"] = gate
         if args.json:
             print(json.dumps(comparison, ensure_ascii=False))
         elif args.output:
@@ -297,6 +314,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Comparison: {output}")
         else:
             print(_format_pack_comparison(comparison))
+        if gate_requested and not gate["passed"]:
+            if args.json:
+                print(_format_pack_comparison_gate(gate), file=sys.stderr)
+            else:
+                print(_format_pack_comparison_gate(gate))
+            return 1
         return 0
 
     if args.command == "eval":
@@ -752,6 +775,28 @@ def _format_pack_comparison(comparison: dict) -> str:
         direction = "added" if label.startswith("Added") else "removed"
         values = comparison["changes"][key][direction]
         lines.append(f"{label}: {', '.join(values) if values else '-'}")
+    return "\n".join(lines)
+
+
+def _pack_compare_gate_requested(args) -> bool:
+    return any(
+        [
+            args.fail_on_removed_tags,
+            args.fail_on_removed_dimensions,
+            args.fail_on_removed_categories,
+            args.fail_on_removed_types,
+            args.fail_on_removed_modes,
+        ]
+    )
+
+
+def _format_pack_comparison_gate(gate: dict) -> str:
+    if gate.get("passed"):
+        return "Coverage drift gate passed."
+    lines = ["Coverage drift gate failed:"]
+    for violation in gate.get("violations", []):
+        values = ", ".join(violation.get("values", [])) or "-"
+        lines.append(f"- {violation.get('coverage')} {violation.get('reason')}: {values}")
     return "\n".join(lines)
 
 

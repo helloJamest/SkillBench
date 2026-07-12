@@ -28,6 +28,30 @@ def compare_eval_packs(left_path: str | Path, right_path: str | Path) -> dict[st
     }
 
 
+def evaluate_eval_pack_comparison_gate(
+    comparison: dict[str, Any],
+    *,
+    fail_on_removed_tags: list[str] | None = None,
+    fail_on_removed_dimensions: list[str] | None = None,
+    fail_on_removed_categories: list[str] | None = None,
+    fail_on_removed_types: list[str] | None = None,
+    fail_on_removed_modes: list[str] | None = None,
+) -> dict[str, Any]:
+    requirements = {
+        "tags": fail_on_removed_tags or [],
+        "dimensions": fail_on_removed_dimensions or [],
+        "categories": fail_on_removed_categories or [],
+        "types": fail_on_removed_types or [],
+        "modes": fail_on_removed_modes or [],
+    }
+    violations = []
+    for coverage_key, required_values in requirements.items():
+        failed_values = sorted(set(required_values) & set(comparison["changes"][coverage_key]["removed"]))
+        if failed_values:
+            violations.append({"coverage": coverage_key, "reason": "removed", "values": failed_values})
+    return {"passed": not violations, "violations": violations}
+
+
 def render_eval_pack_comparison_markdown(left_path: str | Path, right_path: str | Path) -> str:
     comparison = compare_eval_packs(left_path, right_path)
     left = comparison["left"]

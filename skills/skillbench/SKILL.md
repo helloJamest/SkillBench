@@ -16,7 +16,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `list-packs`: discover bundled or custom eval pack catalogs before copying one into a skill repo.
    - `bootstrap-pack`: copy a bundled or custom eval pack into a target skill project for customization.
    - `pack-checklist`: render a Markdown authoring checklist for reviewing an eval pack before CI.
-   - `pack-compare`: compare eval pack versions for case and coverage changes.
+   - `pack-compare`: compare eval pack versions for case and coverage changes, with optional removed-coverage CI gates.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.
@@ -54,6 +54,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench bootstrap-pack generi
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-checklist <path-to-eval-set.json> --output .skillbench/eval-pack-checklist.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-compare <left-eval-set.json> <right-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-compare <left-eval-set.json> <right-eval-set.json> --output .skillbench/eval-pack-comparison.md
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-compare <left-eval-set.json> <right-eval-set.json> --fail-on-removed-dimensions safety workflow_specificity --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases plugins/skillbench/examples/eval_packs/generic-skill-smoke.json --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases plugins/skillbench/examples/eval_packs/generic-skill-release.json --include-tag safety --json
@@ -102,7 +103,7 @@ Every eval/evo run should produce:
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, and smoke-to-release comparison Markdown/JSON
+- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, and coverage drift gate evidence
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures
@@ -111,4 +112,4 @@ Every eval/evo run should produce:
 Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, matrix gate failures, harness efficiency, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a harness matrix view for `harness-matrix` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
 When `validate-cases` reports `hints`, surface the concrete field, suggestion, and example so contributors can repair pack metadata without reverse-engineering the schema.
 When `pack-checklist` is used, summarize the generated Markdown path and call out validation failures or repair hints that need action before CI.
-When `pack-compare --output` is used, summarize added/removed cases and coverage changes from the Markdown artifact path.
+When `pack-compare --output` is used, summarize added/removed cases and coverage changes from the Markdown artifact path. When `--fail-on-removed-*` gates are used, call out any gate violations and the non-zero exit status.

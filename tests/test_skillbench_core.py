@@ -522,6 +522,61 @@ def test_pack_compare_cli_writes_markdown_file(tmp_path, capsys):
     assert "release-workflow-depth" in markdown
 
 
+def test_pack_compare_cli_fails_when_required_tag_is_removed(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--fail-on-removed-tags",
+            "smoke",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 1
+    assert "Coverage drift gate failed" in output
+    assert "tags removed: smoke" in output
+
+
+def test_pack_compare_cli_json_includes_passing_coverage_drift_gate(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--fail-on-removed-dimensions",
+            "safety",
+            "workflow_specificity",
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["gate"] == {"passed": True, "violations": []}
+
+
+def test_pack_compare_cli_json_keeps_stdout_machine_readable_when_gate_fails(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--fail-on-removed-tags",
+            "smoke",
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 1
+    assert data["gate"]["passed"] is False
+    assert data["gate"]["violations"] == [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}]
+    assert "Coverage drift gate failed" in captured.err
+
+
 def test_case_selection_filters_by_tags_mode_and_limit():
     eval_set = generate_eval_set(SAMPLE_SKILL, profile="release")
 
@@ -2041,6 +2096,9 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "--output" in workflow
     assert "generic-skill-smoke-to-release-comparison.md" in workflow
     assert "generic-skill-smoke-to-release-comparison.json" in workflow
+    assert "--fail-on-removed-dimensions" in workflow
+    assert "--fail-on-removed-types" in workflow
+    assert "--fail-on-removed-modes" in workflow
     assert "skillbench validate-cases" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "eval-pack-checklists" in workflow
