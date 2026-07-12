@@ -62,6 +62,8 @@ jobs:
               status=1
             fi
           fi
+          skillbench pr-comment .skillbench/pack-checklists \
+            --output .skillbench/pack-checklists/skillbench-pack-review-comment.md
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           exit 0
 

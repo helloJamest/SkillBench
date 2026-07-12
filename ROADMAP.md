@@ -52,4 +52,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.16 shipped `pack-compare --fail-on-removed-*` coverage drift gates and wired required dimension/type/mode gates into the pack checklist workflow.
 - v0.5.17 shipped coverage drift gate policy loading from right-hand eval pack metadata and `--gate-policy` JSON files.
 - v0.5.18 shipped coverage drift gate status, policy sources, and violations in Markdown comparison artifacts.
-- Next: add a reusable PR comment renderer for eval pack checklist and coverage drift review artifacts.
+- v0.5.19 shipped reusable PR comment rendering for eval pack checklist, validation, and coverage drift review artifacts.
+- Next: add an example GitHub workflow step that posts or updates the eval pack review PR comment.

@@ -313,13 +313,15 @@ python -m skillbench ci `
 
 CI writes `ci_result.json` in the run directory and exits non-zero on threshold or regression failures. Text-mode CI also writes `junit.xml` in the run directory by default; use `--junit` and `--sarif` to choose explicit artifact paths for CI uploads.
 
-Render a reusable Markdown PR summary from any eval run, `ci_result.json`, `lift_report.json`, or `matrix_report.json`:
+Render a reusable Markdown PR summary from any eval run, `ci_result.json`, `lift_report.json`, `matrix_report.json`, or eval pack review artifact directory:
 
 ```powershell
 python -m skillbench pr-comment `
   .skillbench\runs\latest `
   --output .skillbench\reports\skillbench-comment.md
 ```
+
+For eval pack review artifacts, point `pr-comment` at a directory containing `*.validation.json` and `*comparison.json` files. The summary includes validation status, coverage drift gate status, policy sources, and violations.
 
 The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, renders `skillbench pr-comment`, and posts or updates a sticky SkillBench summary comment on the PR.
 
@@ -336,7 +338,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -444,7 +446,7 @@ Every eval run writes:
 - `lift_report.json` for `skillbench lift` A/B runs
 - `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
-- `skillbench-comment.md` when `skillbench pr-comment --output <path>` is requested
+- `skillbench-comment.md` or `skillbench-pack-review-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
 - `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
 - `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist and comparison artifacts

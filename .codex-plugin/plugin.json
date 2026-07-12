@@ -1,6 +1,6 @@
 {
   "name": "skillbench",
-  "version": "0.5.18",
+  "version": "0.5.19",
   "description": "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, harness matrices, GEPA-style optimization, and optional Comet tracking.",
   "author": {
     "name": "helloJamest",

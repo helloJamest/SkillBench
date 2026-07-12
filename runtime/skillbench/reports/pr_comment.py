@@ -14,6 +14,9 @@ def render_pr_comment(source: str | Path) -> str:
     if path.is_file():
         return _render_file(path)
 
+    if _has_pack_review_artifacts(path):
+        return _render_pack_review(path)
+
     matrix_path = path / "matrix_report.json"
     if matrix_path.exists():
         return _render_matrix(path, read_json(matrix_path))
@@ -76,6 +79,8 @@ def _render_json_file(path: Path) -> str:
         return _render_ci_payload(path, payload)
     if "case_results" in payload and "total_score" in payload:
         return _render_eval(path.parent, payload, None)
+    if payload.get("schema_version") == "skillbench.eval-pack-comparison.v1":
+        return _render_pack_review(path.parent)
     raise FileNotFoundError(f"Unsupported SkillBench JSON artifact for PR comment: {path}")
 
 
@@ -185,6 +190,85 @@ def _render_eval(run_dir: Path, report: dict[str, Any], ci_result: dict[str, Any
     if failures:
         lines.extend(["", "### Gate Failures", ""])
         lines.extend(f"- {_cell(failure.get('message', failure))}" for failure in failures[:10])
+    return "\n".join(lines)
+
+
+def _has_pack_review_artifacts(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if any(path.glob("*.validation.json")):
+        return True
+    for candidate in path.glob("*.json"):
+        try:
+            if read_json(candidate).get("schema_version") == "skillbench.eval-pack-comparison.v1":
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _render_pack_review(review_dir: Path) -> str:
+    validations = [(path, read_json(path)) for path in sorted(review_dir.glob("*.validation.json"))]
+    comparisons = []
+    for path in sorted(review_dir.glob("*.json")):
+        if path.name.endswith(".validation.json"):
+            continue
+        payload = read_json(path)
+        if payload.get("schema_version") == "skillbench.eval-pack-comparison.v1":
+            comparisons.append((path, payload))
+
+    validation_status = "PASS" if validations and all(item.get("passed") for _, item in validations) else "FAIL"
+    comparison_status = "PASS" if all((item.get("gate") or {}).get("passed", True) for _, item in comparisons) else "FAIL"
+    checklist_paths = sorted(path for path in review_dir.glob("*.md") if "comparison" not in path.name)
+
+    lines = [
+        PR_COMMENT_MARKER,
+        "## SkillBench Eval Pack Review",
+        "",
+        f"Validations: **{validation_status}** | Comparisons: **{comparison_status}** | Checklists: `{len(checklist_paths)}`",
+        "",
+        "### Validation Artifacts",
+        "",
+        "| Eval Pack | Cases | Errors | Warnings | Artifact |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ]
+    if validations:
+        for path, item in validations:
+            lines.append(
+                f"| {_cell(item.get('eval_set_id', path.stem))} | {_number(item.get('cases'))} | "
+                f"{len(item.get('errors') or [])} | {len(item.get('warnings') or [])} | `{path.name}` |"
+            )
+    else:
+        lines.append("| - | - | - | - | - |")
+
+    lines.extend(["", "### Coverage Drift", "", "| Comparison | Case Delta | Gate | Policy Sources | Artifact |", "| --- | ---: | --- | --- | --- |"])
+    if comparisons:
+        for path, item in comparisons:
+            left = (item.get("left") or {}).get("eval_set_id", "-")
+            right = (item.get("right") or {}).get("eval_set_id", "-")
+            gate = item.get("gate") or {}
+            sources = ", ".join(f"`{source}`" for source in gate.get("policy_sources", [])) or "-"
+            markdown_artifact = path.with_suffix(".md")
+            artifact = markdown_artifact.name if markdown_artifact.exists() else path.name
+            lines.append(
+                f"| {_cell(left)} -> {_cell(right)} | {_number(item.get('case_delta'), signed=True)} | "
+                f"{'PASS' if gate.get('passed', True) else 'FAIL'} | {sources} | `{artifact}` |"
+            )
+    else:
+        lines.append("| - | - | - | - | - |")
+
+    violations = [(path, violation) for path, item in comparisons for violation in (item.get("gate") or {}).get("violations", [])]
+    lines.extend(["", "### Gate Violations", ""])
+    if violations:
+        for path, violation in violations[:10]:
+            values = ", ".join(f"`{value}`" for value in violation.get("values", [])) or "`-`"
+            lines.append(f"- `{path.name}`: {_cell(violation.get('coverage'))} {_cell(violation.get('reason'))}: {values}")
+    else:
+        lines.append("- None.")
+
+    if checklist_paths:
+        lines.extend(["", "### Checklists", ""])
+        lines.extend(f"- `{path.name}`" for path in checklist_paths[:20])
     return "\n".join(lines)
 
 

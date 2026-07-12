@@ -189,8 +189,8 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument("run_dir")
     report_parser.add_argument("--json", action="store_true", help="Print the persisted report JSON.")
 
-    pr_comment_parser = sub.add_parser("pr-comment", help="Render a GitHub PR comment markdown summary for a run or report artifact.")
-    pr_comment_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
+    pr_comment_parser = sub.add_parser("pr-comment", help="Render a GitHub PR comment markdown summary for a run, report artifact, or eval pack review artifact directory.")
+    pr_comment_parser.add_argument("source", help="Run directory, latest pointer, report JSON, CI JSON, or eval pack review artifact directory.")
     pr_comment_parser.add_argument("--output", help="Write the markdown comment to this path.")
 
     bundle_parser = sub.add_parser("bundle", help="Build a publishable report bundle with dashboard, PR comment, CI artifacts, and raw artifact manifests.")

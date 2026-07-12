@@ -2005,6 +2005,40 @@ def test_pr_comment_cli_reads_external_ci_result_json(tmp_path, capsys):
     assert "report.json" in markdown
 
 
+def test_pr_comment_renders_eval_pack_review_artifacts(tmp_path):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.md").write_text("# Smoke checklist\n", encoding="utf-8")
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    (review_dir / "generic-skill-release.validation.json").write_text(
+        json.dumps(validate_eval_set(EVAL_PACKS_DIR / "generic-skill-release.json")),
+        encoding="utf-8",
+    )
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+    comparison["gate"] = {
+        "passed": False,
+        "policy_sources": ["right.metadata.coverage_drift_gate", ".skillbench/pack-gate-policy.json"],
+        "violations": [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}],
+    }
+    (review_dir / "generic-skill-smoke-to-release-comparison.json").write_text(json.dumps(comparison), encoding="utf-8")
+    (review_dir / "generic-skill-smoke-to-release-comparison.md").write_text("# Comparison\n", encoding="utf-8")
+
+    markdown = render_pr_comment(review_dir)
+
+    assert "<!-- skillbench-pr-comment -->" in markdown
+    assert "## SkillBench Eval Pack Review" in markdown
+    assert "Validations: **PASS**" in markdown
+    assert "Comparisons: **FAIL**" in markdown
+    assert "generic-skill-smoke-v1 -> generic-skill-release-v1" in markdown
+    assert "right.metadata.coverage_drift_gate" in markdown
+    assert "tags removed: `smoke`" in markdown
+    assert "generic-skill-smoke.validation.json" in markdown
+    assert "generic-skill-smoke-to-release-comparison.md" in markdown
+
+
 def test_report_bundle_writes_dashboard_comment_ci_artifacts_and_raw_manifest(tmp_path, capsys):
     exit_code = skillbench_main(
         [
@@ -2170,6 +2204,8 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "examples/eval_packs/**/*.json" in workflow
     assert "skillbench pack-checklist" in workflow
     assert "skillbench pack-compare" in workflow
+    assert "skillbench pr-comment .skillbench/pack-checklists" in workflow
+    assert "skillbench-pack-review-comment.md" in workflow
     assert "--output" in workflow
     assert "generic-skill-smoke-to-release-comparison.md" in workflow
     assert "generic-skill-smoke-to-release-comparison.json" in workflow

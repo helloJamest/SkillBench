@@ -28,7 +28,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `benchmark`: run the bundled good/vague/unsafe/incomplete fixtures and rank them.
    - `dashboard`: serve case-level traceability for a run.
    - `export-dashboard`: write static HTML pages for a run.
-   - `pr-comment`: render reusable GitHub PR Markdown for `report.json`, `ci_result.json`, `lift_report.json`, or `matrix_report.json`.
+   - `pr-comment`: render reusable GitHub PR Markdown for `report.json`, `ci_result.json`, `lift_report.json`, `matrix_report.json`, or eval pack review artifact directories.
    - `bundle`: build a publishable directory with static dashboard pages, PR comment Markdown, JUnit/SARIF when available, copied raw artifacts, and bundle manifests.
 3. Prefer an explicit eval set when the user provides one. Otherwise use SkillBench's default case generator.
    - For third-party skill projects without their own eval set, start from `examples/eval_packs/generic-skill-smoke.json` or `examples/eval_packs/generic-skill-release.json`.
@@ -99,12 +99,12 @@ Every eval/evo run should produce:
 - optional `reflection.json` and mutation records
 - `comet_offline.jsonl` when Comet ML is unavailable
 - `ci_result.json` when using CI gates
-- `skillbench-comment.md` when using `pr-comment --output <path>` for GitHub PR summaries
+- `skillbench-comment.md` or `skillbench-pack-review-comment.md` when using `pr-comment --output <path>` for GitHub PR summaries
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when using `bundle --output <dir>`
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, and coverage drift gate evidence from pack metadata or policy files
+- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, coverage drift gate evidence, and a reusable pack review PR comment
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures
