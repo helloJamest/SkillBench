@@ -24,6 +24,7 @@ From the repository root:
 python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
+skillbench list-packs --json
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -115,6 +116,11 @@ Contribution-ready eval packs live in `examples/eval_packs/`:
 Use them directly or copy them into your own skill repo and adapt the case inputs:
 
 ```powershell
+python -m skillbench list-packs --json
+
+python -m skillbench list-packs `
+  --packs-dir examples\eval_packs
+
 python -m skillbench validate-cases `
   examples\eval_packs\generic-skill-smoke.json `
   --json

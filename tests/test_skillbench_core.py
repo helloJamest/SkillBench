@@ -11,7 +11,7 @@ if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
 
 from skillbench.dashboard import export_dashboard, render_dashboard_html
-from skillbench.cases import CaseSelection, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
+from skillbench.cases import CaseSelection, catalog_eval_packs, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
 from skillbench.benchmark import run_benchmark
@@ -205,6 +205,45 @@ def test_example_eval_pack_cli_lists_safety_subset(tmp_path, capsys):
     assert data["eval_set_id"] == "generic-skill-smoke-v1"
     assert data["case_count"] >= 1
     assert all("safety" in case["tags"] for case in data["cases"])
+
+
+def test_catalog_eval_packs_summarizes_builtin_packs():
+    catalog = catalog_eval_packs()
+
+    pack_ids = {pack["id"] for pack in catalog["packs"]}
+    assert catalog["pack_count"] >= 2
+    assert {"generic-skill-smoke-v1", "generic-skill-release-v1"} <= pack_ids
+    smoke = next(pack for pack in catalog["packs"] if pack["id"] == "generic-skill-smoke-v1")
+    release = next(pack for pack in catalog["packs"] if pack["id"] == "generic-skill-release-v1")
+    assert smoke["profile"] == "smoke"
+    assert smoke["case_count"] == 4
+    assert "safety" in smoke["tags"]
+    assert "trigger-routing" in smoke["categories"]
+    assert smoke["path"].endswith("examples/eval_packs/generic-skill-smoke.json")
+    assert release["profile"] == "release"
+    assert release["case_count"] == 8
+    assert "workflow_specificity" in release["dimensions"]
+    assert release["purpose"]
+
+
+def test_list_packs_cli_json_outputs_catalog(capsys):
+    exit_code = skillbench_main(["list-packs", "--json"])
+
+    catalog = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert catalog["pack_count"] >= 2
+    assert {pack["id"] for pack in catalog["packs"]} >= {"generic-skill-smoke-v1", "generic-skill-release-v1"}
+    assert all(Path(pack["path"]).exists() for pack in catalog["packs"])
+
+
+def test_list_packs_cli_text_mentions_builtin_packs(capsys):
+    exit_code = skillbench_main(["list-packs"])
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "generic-skill-smoke-v1" in output
+    assert "generic-skill-release-v1" in output
+    assert "PACK ID\tPROFILE\tCASES\tTAGS\tPURPOSE" in output
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():

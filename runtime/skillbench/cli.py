@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, catalog_eval_packs, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -48,6 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser.add_argument("eval_set")
     list_parser.add_argument("--json", action="store_true")
     _add_case_selection_args(list_parser)
+
+    packs_parser = sub.add_parser("list-packs", help="List bundled or custom eval pack catalogs.")
+    packs_parser.add_argument("--packs-dir", help="Directory containing eval pack JSON files. Defaults to examples/eval_packs.")
+    packs_parser.add_argument("--json", action="store_true")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -220,6 +224,14 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(inventory, ensure_ascii=False))
         else:
             print(_format_case_inventory(inventory))
+        return 0
+
+    if args.command == "list-packs":
+        catalog = catalog_eval_packs(args.packs_dir)
+        if args.json:
+            print(json.dumps(catalog, ensure_ascii=False))
+        else:
+            print(_format_pack_catalog(catalog))
         return 0
 
     if args.command == "eval":
@@ -612,6 +624,27 @@ def _format_case_inventory(inventory: dict) -> str:
                     str(case["category"]),
                     ",".join(case.get("tags", [])) or "-",
                     ",".join(case.get("dimensions", [])) or "-",
+                ]
+            )
+        )
+    return "\n".join(lines)
+
+
+def _format_pack_catalog(catalog: dict) -> str:
+    lines = [
+        f"Eval packs: {catalog.get('packs_dir')}",
+        f"Packs: {catalog.get('pack_count', 0)}",
+        "PACK ID\tPROFILE\tCASES\tTAGS\tPURPOSE",
+    ]
+    for pack in catalog.get("packs", []):
+        lines.append(
+            "\t".join(
+                [
+                    str(pack.get("id", "")),
+                    str(pack.get("profile", "")),
+                    str(pack.get("case_count", 0)),
+                    ",".join(pack.get("tags", [])) or "-",
+                    str(pack.get("purpose", "")),
                 ]
             )
         )
