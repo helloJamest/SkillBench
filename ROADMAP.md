@@ -65,4 +65,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.29 shipped a GitHub Actions example for validating `pack-review-smoke --json` against its schema.
 - v0.5.30 shipped concise troubleshooting docs for schema validation failures.
 - v0.5.31 shipped a machine-readable changelog for pack review output contracts.
-- Next: add contract-version emission to pack review smoke JSON output.
+- v0.5.32 shipped contract metadata emission in `pack-review-smoke --json`.
+- Next: add a tiny consumer example that reads contract metadata before validating smoke JSON.

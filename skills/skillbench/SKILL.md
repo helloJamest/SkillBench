@@ -113,6 +113,7 @@ Every eval/evo run should produce:
 - `docs/eval-pack-review-bundles.md` as the reviewer guide for downloading, opening, and triaging bundled eval pack review evidence from CI
 - `docs/schemas/pack-review-smoke-result.schema.json` as the documented shape of `pack-review-smoke --json`
 - `docs/schemas/pack-review-contracts.changelog.json` as the machine-readable changelog for pack review output contracts
+- `contract` metadata in `pack-review-smoke --json` so CI and downstream tools can identify the contract id, version, schema, and changelog
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

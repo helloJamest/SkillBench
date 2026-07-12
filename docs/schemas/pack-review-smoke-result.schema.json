@@ -5,6 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "contract",
     "passed",
     "cleaned",
     "summary",
@@ -21,6 +22,30 @@
     "dashboard"
   ],
   "properties": {
+    "contract": {
+      "type": "object",
+      "description": "Machine-readable output contract metadata for CI and downstream consumers.",
+      "additionalProperties": false,
+      "required": ["id", "version", "schema", "changelog"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "const": "skillbench.pack-review-smoke-result"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "schema": {
+          "type": "string",
+          "const": "docs/schemas/pack-review-smoke-result.schema.json"
+        },
+        "changelog": {
+          "type": "string",
+          "const": "docs/schemas/pack-review-contracts.changelog.json"
+        }
+      }
+    },
     "passed": {
       "type": "boolean",
       "description": "True when all eval pack validations and comparison gates passed."

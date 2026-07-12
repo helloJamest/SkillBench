@@ -1,8 +1,12 @@
 {
   "schema_version": "skillbench.pack-review-contract-changelog.v1",
   "contract_id": "skillbench.pack-review-smoke-result",
-  "latest_version": "0.5.31",
+  "latest_version": "0.5.32",
   "stable_fields": [
+    "contract.id",
+    "contract.version",
+    "contract.schema",
+    "contract.changelog",
     "passed",
     "cleaned",
     "summary.status",
@@ -37,6 +41,16 @@
     "documentation": "Docs-only changes do not change the JSON output contract."
   },
   "entries": [
+    {
+      "version": "0.5.32",
+      "date": "2026-07-12",
+      "compatibility": "additive",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added contract metadata to pack-review-smoke --json output with id, version, schema, and changelog fields."
+      ],
+      "migration": "Consumers can read contract.version to identify the emitting SkillBench runtime. Existing consumers that ignore unknown fields can continue unchanged."
+    },
     {
       "version": "0.5.31",
       "date": "2026-07-12",

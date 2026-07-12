@@ -29,6 +29,15 @@ from .reports import (
     write_sarif_report,
 )
 from .runners import AGENT_RUNNERS
+from . import __version__
+
+
+PACK_REVIEW_SMOKE_CONTRACT = {
+    "id": "skillbench.pack-review-smoke-result",
+    "version": __version__,
+    "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+    "changelog": "docs/schemas/pack-review-contracts.changelog.json",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -742,6 +751,7 @@ def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
     bundle_manifest = build_report_bundle(review_dir, bundle_output)
     summary = _pack_review_smoke_summary(pack_review, bundle_manifest)
     return {
+        "contract": PACK_REVIEW_SMOKE_CONTRACT,
         "passed": bool(pack_review.get("passed")),
         "cleaned": bool(args.clean),
         "summary": summary,

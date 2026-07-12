@@ -2239,6 +2239,10 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
 
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
+    assert data["contract"]["id"] == "skillbench.pack-review-smoke-result"
+    assert data["contract"]["version"] == "0.5.32"
+    assert data["contract"]["schema"] == "docs/schemas/pack-review-smoke-result.schema.json"
+    assert data["contract"]["changelog"] == "docs/schemas/pack-review-contracts.changelog.json"
     assert data["passed"] is True
     assert data["summary"]["status"] == "PASS"
     assert data["summary"]["validation_count"] == 2
@@ -2546,6 +2550,9 @@ def test_pack_review_smoke_result_schema_documents_json_output():
 
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["title"] == "SkillBench Pack Review Smoke Result"
+    assert "contract" in schema["required"]
+    assert schema["properties"]["contract"]["properties"]["id"]["const"] == "skillbench.pack-review-smoke-result"
+    assert schema["properties"]["contract"]["properties"]["schema"]["const"] == "docs/schemas/pack-review-smoke-result.schema.json"
     assert "summary" in schema["required"]
     assert "artifact_hints" in schema["properties"]["summary"]["required"]
     assert "dashboard" in schema["properties"]["summary"]["properties"]["artifact_hints"]["required"]
@@ -2559,7 +2566,7 @@ def test_pack_review_contract_changelog_is_machine_readable():
 
     assert changelog["schema_version"] == "skillbench.pack-review-contract-changelog.v1"
     assert changelog["contract_id"] == "skillbench.pack-review-smoke-result"
-    assert changelog["latest_version"] == "0.5.31"
+    assert changelog["latest_version"] == "0.5.32"
     assert changelog["entries"][0]["version"] == changelog["latest_version"]
     assert changelog["entries"][0]["compatibility"] in {"additive", "breaking", "documentation"}
     assert "docs/schemas/pack-review-smoke-result.schema.json" in changelog["entries"][0]["schema"]
