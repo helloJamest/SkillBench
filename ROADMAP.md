@@ -25,3 +25,7 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.3.3 shipped dashboard case filtering by query, failed-only, dimension, type, mode, and category.
 - v0.3.4 shipped dashboard rendering and static export for run comparison reports.
 - v0.3.5 shipped `timeline.json`, `/timeline`, and static timeline export for evolution run replay.
+
+## v0.4.x: Skill Utility and Lift
+
+- v0.4.0 shipped `skillbench lift` for with-skill vs without-skill A/B evaluation, `lift_report.json`, dashboard rendering, static export, case deltas, dimension lift, and deterministic bootstrap intervals.

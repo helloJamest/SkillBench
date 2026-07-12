@@ -13,6 +13,7 @@ def render_dashboard_html(run_dir: str | Path) -> str:
     requested_path, filters = _split_path_query(run_dir)
     route_case_id: str | None = None
     route_comparison = False
+    route_lift = False
     route_timeline = False
     route_round_index: int | None = None
     route_artifact: Path | None = None
@@ -21,10 +22,13 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         artifact_index = max(index for index, part in enumerate(parts) if part == "artifacts")
         route_artifact = Path(*parts[artifact_index + 1 :]) if artifact_index + 1 < len(parts) else Path()
         requested_path = Path(*parts[:artifact_index])
-    if requested_path.name == "comparison" and not (requested_path / "report.json").exists() and not (requested_path / "evolution.json").exists():
+    if requested_path.name == "comparison" and not _looks_like_run_dir(requested_path):
         route_comparison = True
         requested_path = requested_path.parent
-    if requested_path.name == "timeline" and not (requested_path / "report.json").exists() and not (requested_path / "evolution.json").exists():
+    if requested_path.name == "lift" and not _looks_like_run_dir(requested_path):
+        route_lift = True
+        requested_path = requested_path.parent
+    if requested_path.name == "timeline" and not _looks_like_run_dir(requested_path):
         route_timeline = True
         requested_path = requested_path.parent
     if len(requested_path.parts) >= 2 and requested_path.parts[-2] == "cases":
@@ -44,6 +48,11 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         if comparison_path.exists():
             return _render_comparison(run_path, read_json(comparison_path))
         return _page("Comparison not found", "<p>No comparison.json found.</p>")
+    if route_lift:
+        lift_path = run_path / "lift_report.json"
+        if lift_path.exists():
+            return _render_lift(run_path, read_json(lift_path))
+        return _page("Lift report not found", "<p>No lift_report.json found.</p>")
     if route_timeline:
         evolution_path = run_path / "evolution.json"
         if evolution_path.exists():
@@ -58,6 +67,9 @@ def render_dashboard_html(run_dir: str | Path) -> str:
             if route_round_index is not None:
                 return _render_evolution_round(run_path, evolution, route_round_index)
             return _render_evolution(run_path, evolution)
+        lift_path = run_path / "lift_report.json"
+        if lift_path.exists():
+            return _render_lift(run_path, read_json(lift_path))
         raise FileNotFoundError(f"No report.json or evolution.json found in {run_path}")
     report = read_json(report_path)
     if route_case_id:
@@ -130,6 +142,13 @@ def create_app(run_dir: str | Path):
             return JSONResponse(read_json(comparison))
         return JSONResponse({"error": "comparison.json not found"}, status_code=404)
 
+    @app.get("/api/lift")
+    def api_lift():
+        lift_path = run_path / "lift_report.json"
+        if lift_path.exists():
+            return JSONResponse(read_json(lift_path))
+        return JSONResponse({"error": "lift_report.json not found"}, status_code=404)
+
     @app.get("/artifacts", response_class=HTMLResponse)
     def artifacts_index():
         return _render_artifacts_index(run_path)
@@ -158,6 +177,13 @@ def create_app(run_dir: str | Path):
         if comparison_path.exists():
             return _render_comparison(run_path, read_json(comparison_path))
         return _page("Comparison not found", "<p>No comparison.json found.</p>")
+
+    @app.get("/lift", response_class=HTMLResponse)
+    def lift():
+        lift_path = run_path / "lift_report.json"
+        if lift_path.exists():
+            return _render_lift(run_path, read_json(lift_path))
+        return _page("Lift report not found", "<p>No lift_report.json found.</p>")
 
     @app.get("/cases/{case_id}", response_class=HTMLResponse)
     def case_detail(case_id: str):
@@ -256,6 +282,53 @@ def _render_comparison(run_path: Path, comparison: dict) -> str:
     return _page("SkillBench Comparison", body)
 
 
+def _render_lift(run_path: Path, report: dict) -> str:
+    dimensions = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(name))}</td>"
+        f"<td>{html.escape(_format_number(delta, signed=True))}</td>"
+        "</tr>"
+        for name, delta in sorted((report.get("dimension_lifts") or {}).items())
+    )
+    cases = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('case_id', '')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('baseline_score')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('candidate_score')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('delta'), signed=True))}</td>"
+        "</tr>"
+        for item in report.get("case_lifts", [])
+    )
+    if not dimensions:
+        dimensions = "<tr><td colspan=\"2\">No dimension lift data.</td></tr>"
+    if not cases:
+        cases = "<tr><td colspan=\"4\">No case lift data.</td></tr>"
+    confidence = report.get("confidence", {}).get("mean_case_lift_ci95", {})
+    body = f"""
+    <section class="summary">
+      <h2>{html.escape(str(report.get('run_id', 'lift')))}</h2>
+      <p>Verdict <strong>{html.escape(str(report.get('verdict', '')))}</strong> Total Lift <strong>{html.escape(_format_number(report.get('total_lift'), signed=True))}</strong> Mean Case Lift <strong>{html.escape(_format_number(report.get('mean_case_lift'), signed=True))}</strong></p>
+      <p>CI95 <code>{html.escape(_format_number(confidence.get('low'), signed=True))}</code> to <code>{html.escape(_format_number(confidence.get('high'), signed=True))}</code></p>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/artifacts">Browse raw artifacts</a> <a href="/artifacts/lift_report.json">Open raw lift_report.json</a></p>
+    </section>
+    <section>
+      <h2>A/B Summary</h2>
+      <table>
+        <thead><tr><th></th><th>Baseline</th><th>Candidate</th></tr></thead>
+        <tbody>
+          <tr><th>Label</th><td>{html.escape(str(report.get('baseline', {}).get('label', 'without-skill')))}</td><td>{html.escape(str(report.get('candidate', {}).get('label', 'with-skill')))}</td></tr>
+          <tr><th>Total Score</th><td>{html.escape(_format_number(report.get('baseline', {}).get('total_score')))}</td><td>{html.escape(_format_number(report.get('candidate', {}).get('total_score')))}</td></tr>
+          <tr><th>Worst Case</th><td>{html.escape(str(report.get('baseline', {}).get('worst_case_id', '')))}</td><td>{html.escape(str(report.get('candidate', {}).get('worst_case_id', '')))}</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section><h2>Dimension Lift</h2><table><thead><tr><th>Dimension</th><th>Delta</th></tr></thead><tbody>{dimensions}</tbody></table></section>
+    <section><h2>Case Lift</h2><table><thead><tr><th>Case</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr></thead><tbody>{cases}</tbody></table></section>
+    """
+    return _page("SkillBench Lift Report", body)
+
+
 def _format_number(value: object, signed: bool = False) -> str:
     if isinstance(value, bool):
         return str(value)
@@ -276,6 +349,10 @@ def _load_timeline(run_path: Path, evolution: dict) -> dict:
     if timeline_path.exists():
         return read_json(timeline_path)
     return build_evolution_timeline(evolution, run_path)
+
+
+def _looks_like_run_dir(path: Path) -> bool:
+    return any((path / name).exists() for name in ["report.json", "evolution.json", "lift_report.json"])
 
 
 def _split_path_query(value: str | Path) -> tuple[Path, dict[str, str]]:

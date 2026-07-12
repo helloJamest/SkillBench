@@ -1,6 +1,6 @@
 {
   "name": "skillbench",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "description": "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, GEPA-style optimization, and optional Comet tracking.",
   "author": {
     "name": "helloJamest",
@@ -32,6 +32,7 @@
     "defaultPrompt": [
       "Evaluate this skill with SkillBench.",
       "Run skillbench evo on this SKILL.md.",
+      "Measure skill lift against a no-skill baseline.",
       "Compare these two skill versions."
     ],
     "brandColor": "#2563EB"

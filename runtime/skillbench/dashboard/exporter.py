@@ -15,6 +15,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
 
     report_path = run_path / "report.json"
     evolution_path = run_path / "evolution.json"
+    lift_path = run_path / "lift_report.json"
     if report_path.exists():
         report = read_json(report_path)
         index_html = _rewrite_report_index(render_dashboard_html(run_path), report)
@@ -39,8 +40,14 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
         _write_timeline_page(run_path, evolution, output, pages)
         _write_artifact_pages(run_path, output, pages)
         _write_comparison_page(run_path, output, pages)
+    elif lift_path.exists():
+        index_html = render_dashboard_html(run_path)
+        index_html = index_html.replace('href="/artifacts"', 'href="artifacts/index.html"')
+        index_html = index_html.replace('href="/artifacts/lift_report.json"', 'href="artifacts/lift_report.json/index.html"')
+        _write_page(output / "index.html", index_html, pages, output)
+        _write_artifact_pages(run_path, output, pages)
     else:
-        raise FileNotFoundError(f"No report.json or evolution.json found in {run_path}")
+        raise FileNotFoundError(f"No report.json, evolution.json, or lift_report.json found in {run_path}")
 
     manifest = {
         "run_dir": str(run_path),

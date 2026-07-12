@@ -12,6 +12,7 @@ Each `skillbench evo` run produces:
 
 - An eval set describing which cases validate the skill document.
 - A report with dimension scores, worst-case analysis, attribution, and suggestions.
+- A skill-lift A/B report comparing with-skill and without-skill runs.
 - A local dashboard, evolution timeline, and optional Comet ML experiment artifacts for traceability.
 
 ## Quick Start
@@ -22,6 +23,7 @@ From the repository root:
 python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
+skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench benchmark --json
 ```
 
@@ -44,6 +46,7 @@ python -m skillbench eval examples\skills\sample-skill\SKILL.md --eval-set examp
 
 - `judge-only`: Static, low-cost evaluation of eval cases against the skill document.
 - `full-agent`: Runs a configured agent command, captures evidence, then judges the behavior.
+- `lift`: Runs with-skill vs without-skill A/B evaluation and reports score deltas.
 - `evo`: Runs select, execute, reflect, mutate, and accept over a candidate pool.
 
 In `full-agent` mode, command timeouts are recorded as case evidence instead of aborting the whole run. The case directory still contains `stdout.txt`, `stderr.txt`, `exit_code.txt`, `files.json`, and `agent_audit.json`; `exit_code.txt` is set to `timeout`.
@@ -63,7 +66,7 @@ python -m skillbench eval `
 
 ## Case Selection
 
-`eval`, `ci`, and `evo` can run a focused subset of an eval set:
+`eval`, `ci`, `lift`, and `evo` can run a focused subset of an eval set:
 
 ```powershell
 python -m skillbench eval `
@@ -136,7 +139,7 @@ python -m skillbench list-cases `
   --json
 ```
 
-`list-cases` accepts the same selection filters as `eval`, `ci`, and `evo`, so you can preview a focused subset:
+`list-cases` accepts the same selection filters as `eval`, `ci`, `lift`, and `evo`, so you can preview a focused subset:
 
 ```powershell
 python -m skillbench list-cases `
@@ -203,6 +206,19 @@ CI writes `ci_result.json` in the run directory and exits non-zero on threshold 
 
 The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, reads `ci_result.json`, and posts or updates a sticky SkillBench summary comment on the PR.
 
+## Skill Lift A/B Evaluation
+
+Use `lift` to measure whether a skill document improves the judged outcome compared with a no-skill baseline:
+
+```powershell
+python -m skillbench lift `
+  examples\skills\sample-skill\SKILL.md `
+  --eval-set examples\eval_sets\basic-skill-eval.json `
+  --json
+```
+
+`lift` writes `lift_report.json` with baseline and candidate report paths, total lift, dimension lifts, case-level deltas, a deterministic bootstrap interval over case deltas, and a `HELPS`, `PLACEBO`, or `HARMS` verdict. Pass `--baseline-skill <path>` to compare against an explicit baseline document instead of the generated no-skill baseline.
+
 ## Judge Calibration
 
 Use `calibrate` to run the same skill/eval set repeatedly and measure judge stability before trusting a CI threshold or research comparison:
@@ -248,6 +264,7 @@ Every eval run writes:
 - `report.json`
 - `case_results.jsonl`
 - `summary.md`
+- `lift_report.json` for `skillbench lift` A/B runs
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
@@ -259,6 +276,7 @@ Case detail pages also render full-agent command, stdout, stderr, exit code, and
 When a custom judge fails, the same page shows a dedicated `Judge Error` section with kind, return code, stdout, and stderr.
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
 The report page also includes case filters. You can combine query parameters such as `?failed=1&dimension=safety&type=safety&q=approval` to focus the case table while preserving the run summary.
+Lift dashboards render `lift_report.json` with with-skill / without-skill totals, dimension lift, case lift, and verdict evidence.
 Evolution dashboards expose `/timeline` to trace each select, reflect, mutate, and accept round with selected/mutated candidates, scores, deltas, reflection summaries, mutation summaries, and decision reasons.
 
 Print a compact report for humans, or the persisted JSON for scripts:

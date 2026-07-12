@@ -10,6 +10,7 @@ from .cases import CaseSelection, generate_eval_set, load_eval_set_data, select_
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
+from .lift import run_lift
 from .observability.logging_io import read_json, resolve_run_dir
 from .reports import build_ci_result, build_comparison, write_ci_result, write_comparison, write_junit_xml, write_sarif_report
 from .runners import AGENT_RUNNERS
@@ -61,6 +62,22 @@ def build_parser() -> argparse.ArgumentParser:
     evo_parser.add_argument("--agent-command", default=None)
     evo_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     _add_case_selection_args(evo_parser)
+
+    lift_parser = sub.add_parser("lift", help="Run with-skill vs without-skill A/B evaluation.")
+    lift_parser.add_argument("skill_path")
+    lift_parser.add_argument("--eval-set")
+    lift_parser.add_argument("--output-dir")
+    lift_parser.add_argument("--baseline-skill", help="Optional explicit no-skill baseline document.")
+    lift_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
+    lift_parser.add_argument("--min-lift", type=float, default=0.1)
+    lift_parser.add_argument("--bootstrap-samples", type=int, default=500)
+    lift_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
+    lift_parser.add_argument("--judge-command", default=None)
+    lift_parser.add_argument("--agent-runner", choices=AGENT_RUNNERS, default=None)
+    lift_parser.add_argument("--agent-command", default=None)
+    lift_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
+    lift_parser.add_argument("--json", action="store_true")
+    _add_case_selection_args(lift_parser)
 
     ci_parser = sub.add_parser("ci", help="Run evaluation and fail on thresholds.")
     ci_parser.add_argument("skill_path")
@@ -202,6 +219,32 @@ def main(argv: list[str] | None = None) -> int:
             **_case_selection_kwargs(args),
         )
         print(json.dumps({"run_id": evolution.run_id, "best_candidate_id": evolution.best_candidate_id, "evolution": evolution.artifacts["evolution_json"]}, ensure_ascii=False))
+        return 0
+
+    if args.command == "lift":
+        config = SkillBenchConfig.from_env(args.output_dir)
+        if args.judge_backend:
+            config.judge_backend = args.judge_backend
+        if args.judge_command:
+            config.judge_command = args.judge_command
+        _apply_agent_args(config, args)
+        if args.agent_timeout is not None:
+            config.agent_timeout_sec = args.agent_timeout
+        result = run_lift(
+            args.skill_path,
+            eval_set_path=args.eval_set,
+            output_dir=args.output_dir,
+            baseline_skill_path=args.baseline_skill,
+            config=config,
+            mode_override=args.mode,
+            min_lift=args.min_lift,
+            bootstrap_samples=args.bootstrap_samples,
+            **_case_selection_kwargs(args),
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(_format_lift(result))
         return 0
 
     if args.command == "ci":
@@ -465,6 +508,19 @@ def _format_compare(left: dict, right: dict) -> str:
         lval = float(left.get("dimension_scores", {}).get(name, 0.0))
         rval = float(right.get("dimension_scores", {}).get(name, 0.0))
         lines.append(f"  {name}: {rval - lval:+.3f}")
+    return "\n".join(lines)
+
+
+def _format_lift(result: dict) -> str:
+    lines = [
+        f"Lift: {result['run_id']}",
+        f"Verdict: {result['verdict']}",
+        f"Baseline:  {result['baseline']['label']} total={result['baseline']['total_score']}",
+        f"Candidate: {result['candidate']['label']} total={result['candidate']['total_score']}",
+        f"Total lift: {result['total_lift']:+.3f}",
+        f"Mean case lift: {result['mean_case_lift']:+.3f}",
+        f"Lift report: {result['artifacts']['lift_report_json']}",
+    ]
     return "\n".join(lines)
 
 

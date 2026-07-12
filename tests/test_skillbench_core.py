@@ -18,6 +18,7 @@ from skillbench.benchmark import run_benchmark
 from skillbench.calibrate import run_calibration
 from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
+from skillbench.lift import run_lift
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
 from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
@@ -1163,6 +1164,66 @@ def test_benchmark_eval_set_contains_trusted_case_metadata():
     assert all(case["golden_behavior"] for case in data["cases"])
     assert all(case["anti_patterns"] for case in data["cases"])
     assert all(case["rubric_notes"] for case in data["cases"])
+
+
+def test_lift_writes_ab_report_with_case_deltas(tmp_path):
+    result = run_lift(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "lift")
+
+    report_path = Path(result["artifacts"]["lift_report_json"])
+    assert report_path.exists()
+    data = json.loads(report_path.read_text(encoding="utf-8"))
+    assert data["run_id"] == result["run_id"]
+    assert data["baseline"]["label"] == "without-skill"
+    assert data["candidate"]["label"] == "with-skill"
+    assert data["candidate"]["total_score"] >= data["baseline"]["total_score"]
+    assert data["total_lift"] == round(data["candidate"]["total_score"] - data["baseline"]["total_score"], 3)
+    assert data["verdict"] in {"HELPS", "PLACEBO", "HARMS"}
+    assert data["case_lifts"]
+    assert {"case_id", "baseline_score", "candidate_score", "delta"} <= set(data["case_lifts"][0])
+    assert Path(data["baseline"]["report_json"]).exists()
+    assert Path(data["candidate"]["report_json"]).exists()
+
+
+def test_lift_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "lift",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "lift"),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["verdict"] in {"HELPS", "PLACEBO", "HARMS"}
+    assert Path(data["artifacts"]["lift_report_json"]).exists()
+
+
+def test_dashboard_renders_lift_report(tmp_path):
+    result = run_lift(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "lift")
+    run_dir = Path(result["artifacts"]["lift_report_json"]).parent
+
+    html = render_dashboard_html(run_dir)
+
+    assert "SkillBench Lift Report" in html
+    assert "Total Lift" in html
+    assert "Case Lift" in html
+    assert "without-skill" in html
+    assert "with-skill" in html
+
+
+def test_export_dashboard_writes_lift_static_pages(tmp_path):
+    result = run_lift(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "lift")
+    run_dir = Path(result["artifacts"]["lift_report_json"]).parent
+    manifest = export_dashboard(run_dir, tmp_path / "lift-site")
+
+    assert "index.html" in manifest["pages"]
+    assert "artifacts/lift_report.json/index.html" in manifest["pages"]
+    assert "SkillBench Lift Report" in (tmp_path / "lift-site" / "index.html").read_text(encoding="utf-8")
 
 
 def test_pr_comment_workflow_runs_skillbench_ci_and_posts_sticky_comment():
