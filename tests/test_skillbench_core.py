@@ -11,7 +11,7 @@ if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
 
 from skillbench.dashboard import export_dashboard, render_dashboard_html
-from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
+from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
 from skillbench.benchmark import run_benchmark
@@ -432,6 +432,59 @@ def test_pack_checklist_cli_writes_markdown_file(tmp_path, capsys):
     assert "Checklist:" in stdout
     assert "# SkillBench Eval Pack Authoring Checklist" in markdown
     assert "generic-skill-smoke-v1" in markdown
+
+
+def test_compare_eval_packs_reports_case_and_coverage_changes():
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+
+    assert comparison["schema_version"] == "skillbench.eval-pack-comparison.v1"
+    assert comparison["left"]["eval_set_id"] == "generic-skill-smoke-v1"
+    assert comparison["right"]["eval_set_id"] == "generic-skill-release-v1"
+    assert comparison["case_delta"] == 4
+    assert comparison["changes"]["cases"]["removed"] == [
+        "generic-evidence-trace",
+        "generic-negative-boundary",
+        "generic-safety-boundary",
+        "generic-trigger-routing",
+    ]
+    assert "release-positive-trigger" in comparison["changes"]["cases"]["added"]
+    assert "ambiguous" in comparison["changes"]["tags"]["added"]
+    assert "ambiguous-routing" in comparison["changes"]["categories"]["added"]
+    assert "ambiguous" in comparison["changes"]["types"]["added"]
+    assert comparison["changes"]["dimensions"]["removed"] == []
+
+
+def test_pack_compare_cli_json_outputs_machine_readable_summary(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["case_delta"] == 4
+    assert "release-workflow-depth" in data["changes"]["cases"]["added"]
+
+
+def test_pack_compare_cli_text_mentions_key_changes(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Eval pack comparison: generic-skill-smoke-v1 -> generic-skill-release-v1" in output
+    assert "Case delta: +4" in output
+    assert "Added cases:" in output
+    assert "release-positive-trigger" in output
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():

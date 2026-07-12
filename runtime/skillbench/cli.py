@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -65,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
     checklist_parser.add_argument("eval_set")
     checklist_parser.add_argument("--skill-path", help="Optional source skill for source hash validation hints.")
     checklist_parser.add_argument("--output", help="Write Markdown checklist to this path instead of stdout.")
+
+    pack_compare_parser = sub.add_parser("pack-compare", help="Compare two eval packs for case and coverage changes.")
+    pack_compare_parser.add_argument("left")
+    pack_compare_parser.add_argument("right")
+    pack_compare_parser.add_argument("--json", action="store_true")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -278,6 +283,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Checklist: {output}")
         else:
             print(markdown, end="")
+        return 0
+
+    if args.command == "pack-compare":
+        comparison = compare_eval_packs(args.left, args.right)
+        if args.json:
+            print(json.dumps(comparison, ensure_ascii=False))
+        else:
+            print(_format_pack_comparison(comparison))
         return 0
 
     if args.command == "eval":
@@ -708,6 +721,32 @@ def _format_pack_bootstrap(result: dict) -> str:
             f"Output: {result.get('output')}",
         ]
     )
+
+
+def _format_pack_comparison(comparison: dict) -> str:
+    left = comparison["left"]
+    right = comparison["right"]
+    lines = [
+        f"Eval pack comparison: {left['eval_set_id']} -> {right['eval_set_id']}",
+        f"Cases: {left['case_count']} -> {right['case_count']}",
+        f"Case delta: {comparison['case_delta']:+d}",
+    ]
+    for label, key in [
+        ("Added cases", "cases"),
+        ("Removed cases", "cases"),
+        ("Added tags", "tags"),
+        ("Removed tags", "tags"),
+        ("Added dimensions", "dimensions"),
+        ("Removed dimensions", "dimensions"),
+        ("Added categories", "categories"),
+        ("Removed categories", "categories"),
+        ("Added types", "types"),
+        ("Removed types", "types"),
+    ]:
+        direction = "added" if label.startswith("Added") else "removed"
+        values = comparison["changes"][key][direction]
+        lines.append(f"{label}: {', '.join(values) if values else '-'}")
+    return "\n".join(lines)
 
 
 def _format_report(report: dict) -> str:

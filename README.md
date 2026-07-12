@@ -27,6 +27,7 @@ skillbench report .skillbench/runs/latest
 skillbench list-packs --json
 skillbench bootstrap-pack generic-skill-smoke-v1 --target path/to/your-skill --json
 skillbench pack-checklist examples/eval_packs/generic-skill-smoke.json --output .skillbench/eval-pack-checklist.md
+skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --json
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -138,6 +139,11 @@ python -m skillbench pack-checklist `
   examples\eval_packs\generic-skill-smoke.json `
   --output .skillbench\eval-pack-checklist.md
 
+python -m skillbench pack-compare `
+  examples\eval_packs\generic-skill-smoke.json `
+  examples\eval_packs\generic-skill-release.json `
+  --json
+
 python -m skillbench validate-cases `
   examples\eval_packs\generic-skill-smoke.json `
   --json
@@ -195,6 +201,15 @@ Render a contributor-facing Markdown checklist before submitting a new or custom
 python -m skillbench pack-checklist `
   .skillbench\evals\my-skill-release.json `
   --output .skillbench\eval-pack-checklist.md
+```
+
+Compare two eval packs to review coverage drift before a pack version changes:
+
+```powershell
+python -m skillbench pack-compare `
+  examples\eval_packs\generic-skill-smoke.json `
+  examples\eval_packs\generic-skill-release.json `
+  --json
 ```
 
 List case IDs, tags, modes, and dimensions before choosing a focused run:

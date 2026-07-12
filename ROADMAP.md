@@ -46,4 +46,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.10 shipped eval pack authoring hints and repair suggestions in `skillbench validate-cases`.
 - v0.5.11 shipped `skillbench pack-checklist` for rendering contributor-facing Markdown review guides from eval packs.
 - v0.5.12 shipped `.github/workflows/skillbench-pack-checklists.yml` for publishing eval pack checklist artifacts on pack pull requests.
-- Next: add an eval pack comparison command for reviewing case, tag, and dimension coverage changes across pack versions.
+- v0.5.13 shipped `skillbench pack-compare` for reviewing case, tag, dimension, category, type, and mode coverage changes across pack versions.
+- Next: add a Markdown renderer for eval pack comparisons so PR workflows can publish human-readable coverage drift artifacts.
