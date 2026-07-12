@@ -69,4 +69,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.33 shipped a contract-aware consumer example for validating smoke JSON.
 - v0.5.34 shipped a compatibility guard example for rejecting unsupported contract major versions.
 - v0.5.35 shipped a release note template for pack review output contract changes.
-- Next: add a small maintainer checklist for bumping pack review output contracts consistently.
+- v0.5.36 shipped a maintainer checklist for bumping pack review output contracts consistently.
+- Next: add a CI-oriented snippet that compares emitted `contract.version` with the changelog latest version.

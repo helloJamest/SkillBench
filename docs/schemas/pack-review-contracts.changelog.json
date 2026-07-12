@@ -1,7 +1,7 @@
 {
   "schema_version": "skillbench.pack-review-contract-changelog.v1",
   "contract_id": "skillbench.pack-review-smoke-result",
-  "latest_version": "0.5.35",
+  "latest_version": "0.5.36",
   "stable_fields": [
     "contract.id",
     "contract.version",
@@ -41,6 +41,16 @@
     "documentation": "Docs-only changes do not change the JSON output contract."
   },
   "entries": [
+    {
+      "version": "0.5.36",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added a maintainer checklist for bumping pack review output contracts consistently."
+      ],
+      "migration": "No output shape changes. Maintainers can use the checklist before committing future contract updates."
+    },
     {
       "version": "0.5.35",
       "date": "2026-07-12",
