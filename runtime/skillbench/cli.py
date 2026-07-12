@@ -222,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"ERROR [{error['type']}]: {error['message']}")
             for warning in result.get("warnings", []):
                 print(f"WARN  [{warning['type']}]: {warning['message']}")
+            for hint in result.get("hints", []):
+                print(f"HINT [{hint['type']}]: {hint['field']} - {hint['suggestion']}")
         return 0 if result["passed"] else 1
 
     if args.command == "list-cases":

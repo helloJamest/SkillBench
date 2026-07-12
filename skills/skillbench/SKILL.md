@@ -12,7 +12,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
 1. Locate the target `SKILL.md` or plugin skill folder.
 2. Choose the smallest command that matches the request:
    - `generate-cases`: create a deterministic eval set from `SKILL.md`.
-   - `validate-cases`: validate eval set structure and optional source hash.
+   - `validate-cases`: validate eval set structure and optional source hash; use returned `hints` to explain repair suggestions for eval pack authors.
    - `list-packs`: discover bundled or custom eval pack catalogs before copying one into a skill repo.
    - `bootstrap-pack`: copy a bundled or custom eval pack into a target skill project for customization.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
@@ -103,3 +103,4 @@ Every eval/evo run should produce:
 - `manifest.json` and static HTML pages when exporting dashboards
 
 Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, matrix gate failures, harness efficiency, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a harness matrix view for `harness-matrix` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
+When `validate-cases` reports `hints`, surface the concrete field, suggestion, and example so contributors can repair pack metadata without reverse-engineering the schema.

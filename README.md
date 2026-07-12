@@ -182,6 +182,8 @@ python -m skillbench validate-cases `
   --json
 ```
 
+Validation results include `hints` with machine-readable repair guidance for eval pack authors. Each hint includes `type`, `severity`, `field`, `message`, `suggestion`, and an `example`; case-specific hints also include `case_id`. In text mode, SkillBench prints matching `HINT [...]` lines after errors and warnings.
+
 List case IDs, tags, modes, and dimensions before choosing a focused run:
 
 ```powershell

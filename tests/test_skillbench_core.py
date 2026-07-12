@@ -153,6 +153,69 @@ def test_validate_cases_rejects_invalid_difficulty(tmp_path):
     assert any(error["type"] == "difficulty" for error in result["errors"])
 
 
+def test_validate_cases_returns_authoring_hints_for_invalid_metadata(tmp_path):
+    eval_set_path = tmp_path / "authoring-hints.json"
+    eval_set_path.write_text(
+        json.dumps(
+            {
+                "id": "authoring-hints",
+                "cases": [
+                    {
+                        "id": "case-1",
+                        "input": "Evaluate a skill with missing metadata.",
+                        "difficulty": "impossible",
+                        "tags": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = validate_eval_set(eval_set_path)
+
+    hints = result["hints"]
+    difficulty_hint = next(hint for hint in hints if hint["type"] == "difficulty")
+    tags_hint = next(hint for hint in hints if hint["type"] == "tags")
+    trust_hint = next(hint for hint in hints if hint["type"] == "trust-metadata")
+    assert difficulty_hint["severity"] == "error"
+    assert difficulty_hint["case_id"] == "case-1"
+    assert difficulty_hint["field"] == "cases[case-1].difficulty"
+    assert "easy" in difficulty_hint["suggestion"]
+    assert difficulty_hint["example"] == {"difficulty": "medium"}
+    assert tags_hint["severity"] == "warning"
+    assert tags_hint["example"] == {"tags": ["smoke", "trigger"]}
+    assert trust_hint["field"] == "cases[case-1].{category,golden_behavior,anti_patterns,rubric_notes}"
+    assert "golden_behavior" in trust_hint["example"]
+
+
+def test_validate_cases_cli_text_prints_authoring_hints(tmp_path, capsys):
+    eval_set_path = tmp_path / "authoring-hints.json"
+    eval_set_path.write_text(
+        json.dumps(
+            {
+                "id": "authoring-hints",
+                "cases": [
+                    {
+                        "id": "case-1",
+                        "input": "Evaluate a skill with missing metadata.",
+                        "difficulty": "impossible",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = skillbench_main(["validate-cases", str(eval_set_path)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 1
+    assert "HINT [difficulty]:" in output
+    assert "cases[case-1].difficulty" in output
+    assert "Use one of: easy, medium, hard." in output
+
+
 def test_validate_cases_passes_generated_eval_set(tmp_path):
     eval_set = generate_eval_set(SAMPLE_SKILL, profile="smoke", count=8)
     output = write_eval_set(eval_set, tmp_path / "generated.json")
