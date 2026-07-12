@@ -61,4 +61,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.25 shipped `skillbench pack-review-smoke` as a compact local command for producing eval pack review evidence bundles.
 - v0.5.26 shipped `pack-review-smoke --clean` for repeated local runs without stale artifacts.
 - v0.5.27 shipped richer pack review smoke summaries with top gate failures and artifact hints.
-- Next: add optional JSON schema documentation for pack review smoke output.
+- v0.5.28 shipped JSON schema documentation for `pack-review-smoke --json` output.
+- Next: add optional schema validation examples for CI consumers.

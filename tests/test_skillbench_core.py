@@ -36,6 +36,7 @@ PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.ym
 BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
 PACK_CHECKLIST_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-checklists.yml"
 PACK_REVIEW_BUNDLE_GUIDE = ROOT / "docs" / "eval-pack-review-bundles.md"
+PACK_REVIEW_SMOKE_SCHEMA = ROOT / "docs" / "schemas" / "pack-review-smoke-result.schema.json"
 
 
 def test_eval_writes_report(tmp_path):
@@ -2505,6 +2506,8 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     guide = PACK_REVIEW_BUNDLE_GUIDE.read_text(encoding="utf-8")
 
     assert "docs/eval-pack-review-bundles.md" in readme
+    assert "docs/schemas/pack-review-smoke-result.schema.json" in readme
+    assert "docs/schemas/pack-review-smoke-result.schema.json" in guide
     assert "pack-review-smoke" in readme
     assert "pack-review-smoke" in guide
     assert "eval-pack-review-bundle" in guide
@@ -2514,3 +2517,16 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "pack_review_ci_result.json" in guide
     assert "actions/download-artifact" in guide
     assert "coverage drift" in guide.lower()
+
+
+def test_pack_review_smoke_result_schema_documents_json_output():
+    schema = json.loads(PACK_REVIEW_SMOKE_SCHEMA.read_text(encoding="utf-8"))
+
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["title"] == "SkillBench Pack Review Smoke Result"
+    assert "summary" in schema["required"]
+    assert "artifact_hints" in schema["properties"]["summary"]["required"]
+    assert "dashboard" in schema["properties"]["summary"]["properties"]["artifact_hints"]["required"]
+    assert "top_failures" in schema["properties"]["summary"]["properties"]
+    assert "pack_review_ci_result" in schema["properties"]
+    assert "bundle_manifest" in schema["properties"]

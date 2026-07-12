@@ -72,7 +72,7 @@ skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json exampl
   --clean
 ```
 
-The smoke command prints a compact summary with validation and comparison counts, top gate failures, and artifact hints for the dashboard, raw manifest, and pack review CI result. Use `--clean` for repeated local runs so stale validation, comparison, JUnit, SARIF, or dashboard files do not survive from earlier smoke checks. The command above is equivalent to the expanded workflow below:
+The smoke command prints a compact summary with validation and comparison counts, top gate failures, and artifact hints for the dashboard, raw manifest, and pack review CI result. Its `--json` output is documented by `docs/schemas/pack-review-smoke-result.schema.json`. Use `--clean` for repeated local runs so stale validation, comparison, JUnit, SARIF, or dashboard files do not survive from earlier smoke checks. The command above is equivalent to the expanded workflow below:
 
 ```bash
 mkdir -p .skillbench/pack-checklists

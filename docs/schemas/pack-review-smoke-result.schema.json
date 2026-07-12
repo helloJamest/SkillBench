@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/helloJamest/SkillBench/blob/main/docs/schemas/pack-review-smoke-result.schema.json",
+  "title": "SkillBench Pack Review Smoke Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "passed",
+    "cleaned",
+    "summary",
+    "review_dir",
+    "bundle_output",
+    "left_validation",
+    "right_validation",
+    "comparison_json",
+    "comparison_markdown",
+    "pack_review_ci_result",
+    "junit_xml",
+    "sarif_json",
+    "bundle_manifest",
+    "dashboard"
+  ],
+  "properties": {
+    "passed": {
+      "type": "boolean",
+      "description": "True when all eval pack validations and comparison gates passed."
+    },
+    "cleaned": {
+      "type": "boolean",
+      "description": "True when --clean removed existing review and bundle output directories before the run."
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "validation_count",
+        "comparison_count",
+        "failure_count",
+        "top_failures",
+        "artifact_hints"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["PASS", "FAIL"]
+        },
+        "validation_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "comparison_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failure_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_failures": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "message", "artifact"],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "artifact": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "artifact_hints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dashboard",
+            "bundle_manifest",
+            "raw_artifacts",
+            "pack_review_ci_result",
+            "pr_comment",
+            "junit",
+            "sarif"
+          ],
+          "properties": {
+            "dashboard": {
+              "type": "string"
+            },
+            "bundle_manifest": {
+              "type": "string"
+            },
+            "raw_artifacts": {
+              "type": "string"
+            },
+            "pack_review_ci_result": {
+              "type": "string"
+            },
+            "pr_comment": {
+              "type": "string"
+            },
+            "junit": {
+              "type": "string"
+            },
+            "sarif": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "review_dir": {
+      "type": "string"
+    },
+    "bundle_output": {
+      "type": "string"
+    },
+    "left_validation": {
+      "type": "string"
+    },
+    "right_validation": {
+      "type": "string"
+    },
+    "comparison_json": {
+      "type": "string"
+    },
+    "comparison_markdown": {
+      "type": "string"
+    },
+    "pack_review_ci_result": {
+      "type": "string"
+    },
+    "junit_xml": {
+      "type": "string"
+    },
+    "sarif_json": {
+      "type": "string"
+    },
+    "bundle_manifest": {
+      "type": "string"
+    },
+    "dashboard": {
+      "type": "string"
+    }
+  }
+}
