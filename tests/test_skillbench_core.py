@@ -34,6 +34,7 @@ EVAL_PACKS_DIR = ROOT / "examples" / "eval_packs"
 GENERIC_SKILL_SMOKE_PACK = EVAL_PACKS_DIR / "generic-skill-smoke.json"
 PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
 BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
+PACK_CHECKLIST_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-checklists.yml"
 
 
 def test_eval_writes_report(tmp_path):
@@ -1939,3 +1940,17 @@ def test_bundle_workflow_uploads_ci_and_matrix_report_bundles():
     assert "if: always()" in workflow
     assert "Fail when SkillBench CI failed" in workflow
     assert "Fail when SkillBench matrix failed" in workflow
+
+
+def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
+    workflow = PACK_CHECKLIST_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "pull_request:" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "examples/eval_packs/**/*.json" in workflow
+    assert "skillbench pack-checklist" in workflow
+    assert "skillbench validate-cases" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "eval-pack-checklists" in workflow
+    assert ".skillbench/pack-checklists" in workflow
+    assert "Fail when eval pack validation failed" in workflow
