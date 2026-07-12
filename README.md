@@ -340,7 +340,7 @@ python -m skillbench pack-review-smoke `
 ```
 
 This writes validation JSON, comparison JSON/Markdown, `pack_review_ci_result.json`, JUnit, SARIF, and a bundled dashboard for local inspection. The command prints a compact summary with validation/comparison counts, gate failures, artifact hints, and contract metadata; `--json` follows `docs/schemas/pack-review-smoke-result.schema.json`, with output contract changes tracked in `docs/schemas/pack-review-contracts.changelog.json`. Add `--clean` when repeated local runs should remove stale review and bundle artifacts before rebuilding.
-For a schema-validation CI example, troubleshooting notes, a contract-aware consumer snippet with version guarding, the release note template, and the maintainer checklist for contract changes, see `.github/workflows/skillbench-pack-review-smoke.yml`, `docs/eval-pack-review-bundles.md`, `docs/templates/pack-review-contract-release-note.md`, and `docs/maintainers/pack-review-contract-checklist.md`.
+For a schema-validation CI example, troubleshooting notes, contract-aware consumer snippets with version guarding and drift checks, the release note template, and the maintainer checklist for contract changes, see `.github/workflows/skillbench-pack-review-smoke.yml`, `docs/eval-pack-review-bundles.md`, `docs/templates/pack-review-contract-release-note.md`, and `docs/maintainers/pack-review-contract-checklist.md`.
 
 Build one uploadable report bundle for CI artifacts or release evidence:
 

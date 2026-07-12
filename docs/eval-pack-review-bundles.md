@@ -151,3 +151,22 @@ jsonschema.validate(instance=payload, schema=schema)
 print(f"Validated {contract['id']} v{contract['version']} using {schema_path}")
 print(f"Contract changelog latest version: {changelog['latest_version']}")
 ```
+
+## CI contract version drift check
+
+Add this check after schema validation when CI should fail if the emitted runtime contract version and the checked-in changelog fall out of sync.
+
+```python
+import json
+from pathlib import Path
+
+payload = json.loads(Path(".skillbench/pack-review-smoke-result.json").read_text(encoding="utf-8"))
+contract = payload["contract"]
+changelog = json.loads(Path(contract["changelog"]).read_text(encoding="utf-8"))
+
+if contract["version"] != changelog["latest_version"]:
+    raise SystemExit(
+        "SkillBench contract version drift: "
+        f"payload has {contract['version']} but changelog has {changelog['latest_version']}"
+    )
+```

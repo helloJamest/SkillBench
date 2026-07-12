@@ -1,7 +1,7 @@
 {
   "schema_version": "skillbench.pack-review-contract-changelog.v1",
   "contract_id": "skillbench.pack-review-smoke-result",
-  "latest_version": "0.5.36",
+  "latest_version": "0.5.37",
   "stable_fields": [
     "contract.id",
     "contract.version",
@@ -41,6 +41,16 @@
     "documentation": "Docs-only changes do not change the JSON output contract."
   },
   "entries": [
+    {
+      "version": "0.5.37",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added a CI-oriented snippet for comparing emitted contract.version with the changelog latest_version."
+      ],
+      "migration": "No output shape changes. CI consumers can copy the snippet to catch version drift between runtime output and checked-in contract docs."
+    },
     {
       "version": "0.5.36",
       "date": "2026-07-12",

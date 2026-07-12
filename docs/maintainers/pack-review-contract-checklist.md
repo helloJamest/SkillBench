@@ -34,6 +34,7 @@ Use this checklist whenever `pack-review-smoke --json` changes shape, semantics,
 - [ ] Update `tests/test_skillbench_core.py` for emitted `contract.version`.
 - [ ] Add or update tests for schema, changelog, documentation links, and new consumer guidance.
 - [ ] Run focused tests before full verification.
+- [ ] Keep the `CI contract version drift check` in `docs/eval-pack-review-bundles.md` aligned with the emitted contract metadata.
 
 ## Verification
 

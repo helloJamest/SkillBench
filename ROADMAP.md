@@ -70,4 +70,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.34 shipped a compatibility guard example for rejecting unsupported contract major versions.
 - v0.5.35 shipped a release note template for pack review output contract changes.
 - v0.5.36 shipped a maintainer checklist for bumping pack review output contracts consistently.
-- Next: add a CI-oriented snippet that compares emitted `contract.version` with the changelog latest version.
+- v0.5.37 shipped a CI-oriented snippet that compares emitted `contract.version` with the changelog latest version.
+- Next: add a compact release checklist link from the plugin skill instructions.
