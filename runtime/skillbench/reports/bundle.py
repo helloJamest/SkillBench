@@ -74,6 +74,10 @@ def _resolve_source(source: str | Path) -> dict[str, Any]:
 
 
 def _resolve_run_dir_source(run_dir: Path) -> dict[str, Any]:
+    pack_review_path = run_dir / "pack_review_ci_result.json"
+    if pack_review_path.exists():
+        return _source_info("pack-review", run_dir, run_dir, read_json(pack_review_path), pack_review_path)
+
     matrix_path = run_dir / "matrix_report.json"
     if matrix_path.exists():
         matrix_report = read_json(matrix_path)
@@ -104,7 +108,9 @@ def _resolve_file_source(path: Path) -> dict[str, Any]:
         ci_result = payload
         report_path = _resolve_reference(ci_result.get("report_path"), path.parent)
         run_dir = report_path.parent if report_path and report_path.exists() else path.parent
-        kind = "matrix" if ci_result.get("matrix") else "ci"
+        kind = "pack-review" if _looks_like_pack_review_ci_result(ci_result) else "matrix" if ci_result.get("matrix") else "ci"
+        if kind == "pack-review":
+            return _source_info(kind, run_dir, run_dir, ci_result, path)
         return _source_info(kind, run_dir, path, ci_result, path)
 
     if path.name == "matrix_report.json" or _looks_like_matrix_report(payload):
@@ -189,6 +195,10 @@ def _resolve_reference(value: object, base_dir: Path) -> Path | None:
 
 def _looks_like_ci_result(payload: Any) -> bool:
     return isinstance(payload, dict) and "passed" in payload and "report_path" in payload
+
+
+def _looks_like_pack_review_ci_result(payload: Any) -> bool:
+    return isinstance(payload, dict) and payload.get("schema_version") == "skillbench.pack-review-ci-result.v1"
 
 
 def _looks_like_matrix_report(payload: Any) -> bool:

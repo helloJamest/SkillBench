@@ -56,4 +56,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.20 shipped an example GitHub workflow step that posts or updates the eval pack review PR comment.
 - v0.5.21 shipped JUnit/SARIF-style CI artifacts for eval pack validation and coverage drift gates.
 - v0.5.22 shipped dashboard and static HTML rendering for eval pack review artifacts.
-- Next: package eval pack review evidence into report bundles alongside run dashboards.
+- v0.5.23 shipped eval pack review report bundles and uploaded bundle artifacts from the pack checklist workflow.
+- Next: add release-quality docs/examples for consuming eval pack review bundles from CI.

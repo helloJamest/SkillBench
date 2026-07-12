@@ -335,11 +335,11 @@ python -m skillbench bundle `
   --json
 ```
 
-The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` copied run artifacts, `raw_artifacts.json`, `bundle_manifest.json`, and JUnit/SARIF files when the source run has `ci_result.json` or `matrix_ci_result.json`.
+The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` copied run artifacts, `raw_artifacts.json`, `bundle_manifest.json`, and JUnit/SARIF files when the source run has `ci_result.json`, `matrix_ci_result.json`, or `pack_review_ci_result.json`.
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available. Run `skillbench dashboard .skillbench/pack-checklists` or `skillbench export-dashboard .skillbench/pack-checklists --output <site>` to review the same pack evidence visually.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads raw `eval-pack-checklists` artifacts, builds an `eval-pack-review-bundle`, then fails only after the review evidence is available. Run `skillbench dashboard .skillbench/pack-checklists`, `skillbench export-dashboard .skillbench/pack-checklists --output <site>`, or `skillbench bundle .skillbench/pack-checklists --output <bundle>` to review the same pack evidence visually.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -449,9 +449,9 @@ Every eval run writes:
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `skillbench-comment.md` or `skillbench-pack-review-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `pack_review_ci_result.json`, `pack-review-junit.xml`, and `pack-review.sarif` when `skillbench pack-review-artifacts` is requested
-- `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
+- `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, `dashboard/`, and generated `skillbench-comment.md`/JUnit/SARIF when `skillbench bundle --output <dir>` is requested
 - `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts, JUnit/SARIF pack review artifacts, and posting a sticky eval pack review PR comment
+- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts, JUnit/SARIF pack review artifacts, a bundled eval pack review dashboard, and posting a sticky eval pack review PR comment
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
@@ -492,6 +492,14 @@ Package the dashboard together with PR comment text, CI outputs, and copied raw 
 python -m skillbench bundle `
   .skillbench\runs\latest `
   --output .skillbench\report-bundle
+```
+
+Eval pack review artifact directories can be bundled the same way after `pack-review-artifacts` writes `pack_review_ci_result.json`:
+
+```powershell
+python -m skillbench bundle `
+  .skillbench\pack-checklists `
+  --output .skillbench\pack-review-bundle
 ```
 
 ## Optional Integrations

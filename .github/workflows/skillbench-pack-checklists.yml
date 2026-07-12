@@ -7,6 +7,8 @@ on:
       - "examples/eval_packs/**/*.json"
       - "runtime/skillbench/cases/**"
       - "runtime/skillbench/cli.py"
+      - "runtime/skillbench/dashboard/**"
+      - "runtime/skillbench/reports/**"
       - ".github/workflows/skillbench-pack-checklists.yml"
   workflow_dispatch:
 
@@ -86,6 +88,20 @@ jobs:
         with:
           name: eval-pack-checklists
           path: .skillbench/pack-checklists
+
+      - name: Build eval pack review bundle
+        if: always()
+        run: |
+          skillbench bundle .skillbench/pack-checklists \
+            --output .skillbench/pack-review-bundle \
+            --json | tee .skillbench/pack-review-bundle-manifest.json
+
+      - name: Upload eval pack review bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-pack-review-bundle
+          path: .skillbench/pack-review-bundle
 
       - name: Comment eval pack review summary
         if: github.event_name == 'pull_request'

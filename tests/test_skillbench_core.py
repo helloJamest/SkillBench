@@ -2159,6 +2159,63 @@ def test_report_bundle_writes_dashboard_comment_ci_artifacts_and_raw_manifest(tm
     assert "SkillBench CI" in (tmp_path / "bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
 
 
+def test_report_bundle_writes_eval_pack_review_evidence(tmp_path):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+    comparison["gate"] = {
+        "passed": False,
+        "policy_sources": ["right.metadata.coverage_drift_gate"],
+        "violations": [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}],
+    }
+    (review_dir / "generic-skill-smoke-to-release-comparison.json").write_text(json.dumps(comparison), encoding="utf-8")
+    skillbench_main(
+        [
+            "pack-review-artifacts",
+            str(review_dir),
+            "--junit",
+            str(review_dir / "pack-review-junit.xml"),
+            "--sarif",
+            str(review_dir / "pack-review.sarif"),
+        ]
+    )
+
+    manifest = build_report_bundle(review_dir, tmp_path / "pack-review-bundle")
+
+    assert manifest["source"]["kind"] == "pack-review"
+    assert manifest["source"]["ci_result_path"].endswith("pack_review_ci_result.json")
+    assert (tmp_path / "pack-review-bundle" / "dashboard" / "index.html").exists()
+    assert (tmp_path / "pack-review-bundle" / "skillbench-comment.md").exists()
+    assert (tmp_path / "pack-review-bundle" / "junit.xml").exists()
+    assert (tmp_path / "pack-review-bundle" / "skillbench.sarif").exists()
+    raw_manifest = json.loads((tmp_path / "pack-review-bundle" / "raw_artifacts.json").read_text(encoding="utf-8"))
+    assert any(item["path"] == "pack_review_ci_result.json" for item in raw_manifest["artifacts"])
+    assert any(item["path"] == "pack-review-junit.xml" for item in raw_manifest["artifacts"])
+    assert "SkillBench Eval Pack Review" in (tmp_path / "pack-review-bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
+
+
+def test_report_bundle_accepts_eval_pack_review_ci_result_file(tmp_path):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    skillbench_main(["pack-review-artifacts", str(review_dir)])
+    source = review_dir / "pack_review_ci_result.json"
+
+    manifest = build_report_bundle(source, tmp_path / "pack-review-file-bundle")
+
+    assert manifest["source"]["kind"] == "pack-review"
+    assert manifest["source"]["run_dir"] == str(review_dir)
+    assert (tmp_path / "pack-review-file-bundle" / "dashboard" / "index.html").exists()
+    assert "SkillBench Eval Pack Review" in (tmp_path / "pack-review-file-bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
+
+
 def test_report_bundle_reads_utf8_bom_external_ci_result_json(tmp_path, capsys):
     exit_code = skillbench_main(
         [
@@ -2314,5 +2371,7 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "skillbench validate-cases" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "eval-pack-checklists" in workflow
+    assert "skillbench bundle .skillbench/pack-checklists" in workflow
+    assert "eval-pack-review-bundle" in workflow
     assert ".skillbench/pack-checklists" in workflow
     assert "Fail when eval pack validation failed" in workflow
