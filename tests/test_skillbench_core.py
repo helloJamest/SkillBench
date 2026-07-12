@@ -35,6 +35,7 @@ GENERIC_SKILL_SMOKE_PACK = EVAL_PACKS_DIR / "generic-skill-smoke.json"
 PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
 BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
 PACK_CHECKLIST_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-checklists.yml"
+PACK_REVIEW_BUNDLE_GUIDE = ROOT / "docs" / "eval-pack-review-bundles.md"
 
 
 def test_eval_writes_report(tmp_path):
@@ -2375,3 +2376,17 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "eval-pack-review-bundle" in workflow
     assert ".skillbench/pack-checklists" in workflow
     assert "Fail when eval pack validation failed" in workflow
+
+
+def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    guide = PACK_REVIEW_BUNDLE_GUIDE.read_text(encoding="utf-8")
+
+    assert "docs/eval-pack-review-bundles.md" in readme
+    assert "eval-pack-review-bundle" in guide
+    assert "dashboard/index.html" in guide
+    assert "skillbench-comment.md" in guide
+    assert "raw_artifacts.json" in guide
+    assert "pack_review_ci_result.json" in guide
+    assert "actions/download-artifact" in guide
+    assert "coverage drift" in guide.lower()

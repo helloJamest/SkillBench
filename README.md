@@ -339,7 +339,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads raw `eval-pack-checklists` artifacts, builds an `eval-pack-review-bundle`, then fails only after the review evidence is available. Run `skillbench dashboard .skillbench/pack-checklists`, `skillbench export-dashboard .skillbench/pack-checklists --output <site>`, or `skillbench bundle .skillbench/pack-checklists --output <bundle>` to review the same pack evidence visually.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads raw `eval-pack-checklists` artifacts, builds an `eval-pack-review-bundle`, then fails only after the review evidence is available. Run `skillbench dashboard .skillbench/pack-checklists`, `skillbench export-dashboard .skillbench/pack-checklists --output <site>`, or `skillbench bundle .skillbench/pack-checklists --output <bundle>` to review the same pack evidence visually. See `docs/eval-pack-review-bundles.md` for the artifact layout and CI consumption workflow.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -501,6 +501,8 @@ python -m skillbench bundle `
   .skillbench\pack-checklists `
   --output .skillbench\pack-review-bundle
 ```
+
+For GitHub Actions download and triage instructions, see `docs/eval-pack-review-bundles.md`.
 
 ## Optional Integrations
 

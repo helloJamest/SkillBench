@@ -107,6 +107,7 @@ Every eval/evo run should produce:
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
 - `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, coverage drift gate evidence, JUnit/SARIF pack review artifacts, dashboard-readable pack review evidence, a bundled eval pack review dashboard, and posts or updates a reusable pack review PR comment
+- `docs/eval-pack-review-bundles.md` as the reviewer guide for downloading, opening, and triaging bundled eval pack review evidence from CI
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures
