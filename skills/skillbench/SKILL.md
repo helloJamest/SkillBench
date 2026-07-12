@@ -112,6 +112,7 @@ Every eval/evo run should produce:
 - `.github/workflows/skillbench-pack-review-smoke.yml` as an example workflow that validates `pack-review-smoke --json` against its schema and uploads the smoke bundle
 - `docs/eval-pack-review-bundles.md` as the reviewer guide for downloading, opening, and triaging bundled eval pack review evidence from CI
 - `docs/schemas/pack-review-smoke-result.schema.json` as the documented shape of `pack-review-smoke --json`
+- `docs/schemas/pack-review-contracts.changelog.json` as the machine-readable changelog for pack review output contracts
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

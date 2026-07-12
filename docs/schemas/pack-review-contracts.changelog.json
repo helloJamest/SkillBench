@@ -1,0 +1,111 @@
+{
+  "schema_version": "skillbench.pack-review-contract-changelog.v1",
+  "contract_id": "skillbench.pack-review-smoke-result",
+  "latest_version": "0.5.31",
+  "stable_fields": [
+    "passed",
+    "cleaned",
+    "summary.status",
+    "summary.validation_count",
+    "summary.comparison_count",
+    "summary.failure_count",
+    "summary.top_failures[].type",
+    "summary.top_failures[].message",
+    "summary.top_failures[].artifact",
+    "summary.artifact_hints.dashboard",
+    "summary.artifact_hints.bundle_manifest",
+    "summary.artifact_hints.raw_artifacts",
+    "summary.artifact_hints.pack_review_ci_result",
+    "summary.artifact_hints.pr_comment",
+    "summary.artifact_hints.junit",
+    "summary.artifact_hints.sarif",
+    "review_dir",
+    "bundle_output",
+    "left_validation",
+    "right_validation",
+    "comparison_json",
+    "comparison_markdown",
+    "pack_review_ci_result",
+    "junit_xml",
+    "sarif_json",
+    "bundle_manifest",
+    "dashboard"
+  ],
+  "compatibility_policy": {
+    "additive": "New optional fields may be added without changing existing required fields.",
+    "breaking": "Removing or renaming stable fields requires a new schema file or a clearly marked breaking entry.",
+    "documentation": "Docs-only changes do not change the JSON output contract."
+  },
+  "entries": [
+    {
+      "version": "0.5.31",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Published the machine-readable changelog for pack review output contracts."
+      ],
+      "migration": "No output changes. Use this changelog to track future contract changes."
+    },
+    {
+      "version": "0.5.30",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Documented common schema validation failures and local jsonschema debugging commands."
+      ],
+      "migration": "No output changes. Existing consumers can keep using the 0.5.28 schema."
+    },
+    {
+      "version": "0.5.29",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added a GitHub Actions example that validates pack-review-smoke --json output against the schema."
+      ],
+      "migration": "No output changes."
+    },
+    {
+      "version": "0.5.28",
+      "date": "2026-07-12",
+      "compatibility": "additive",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Published the first JSON schema for pack-review-smoke --json output."
+      ],
+      "migration": "Consumers can validate existing 0.5.27 output against this schema."
+    },
+    {
+      "version": "0.5.27",
+      "date": "2026-07-12",
+      "compatibility": "additive",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added summary.status, summary validation and comparison counts, failure count, top failures, and artifact hints to pack-review-smoke --json output."
+      ],
+      "migration": "Consumers that only used path fields can ignore summary. Consumers should prefer summary.artifact_hints for dashboard and raw artifact locations."
+    },
+    {
+      "version": "0.5.26",
+      "date": "2026-07-12",
+      "compatibility": "additive",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added cleaned to pack-review-smoke --json output when --clean support shipped."
+      ],
+      "migration": "Treat missing cleaned as false when reading older results."
+    },
+    {
+      "version": "0.5.25",
+      "date": "2026-07-12",
+      "compatibility": "additive",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Introduced pack-review-smoke --json output with review, comparison, pack review CI, JUnit, SARIF, bundle manifest, and dashboard paths."
+      ],
+      "migration": "This is the first emitted contract."
+    }
+  ]
+}

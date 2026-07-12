@@ -38,6 +38,7 @@ PACK_CHECKLIST_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-chec
 PACK_REVIEW_SMOKE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-review-smoke.yml"
 PACK_REVIEW_BUNDLE_GUIDE = ROOT / "docs" / "eval-pack-review-bundles.md"
 PACK_REVIEW_SMOKE_SCHEMA = ROOT / "docs" / "schemas" / "pack-review-smoke-result.schema.json"
+PACK_REVIEW_CONTRACT_CHANGELOG = ROOT / "docs" / "schemas" / "pack-review-contracts.changelog.json"
 
 
 def test_eval_writes_report(tmp_path):
@@ -2509,6 +2510,8 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "docs/eval-pack-review-bundles.md" in readme
     assert "docs/schemas/pack-review-smoke-result.schema.json" in readme
     assert "docs/schemas/pack-review-smoke-result.schema.json" in guide
+    assert "docs/schemas/pack-review-contracts.changelog.json" in readme
+    assert "docs/schemas/pack-review-contracts.changelog.json" in guide
     assert ".github/workflows/skillbench-pack-review-smoke.yml" in guide
     assert "pack-review-smoke" in readme
     assert "pack-review-smoke" in guide
@@ -2549,3 +2552,15 @@ def test_pack_review_smoke_result_schema_documents_json_output():
     assert "top_failures" in schema["properties"]["summary"]["properties"]
     assert "pack_review_ci_result" in schema["properties"]
     assert "bundle_manifest" in schema["properties"]
+
+
+def test_pack_review_contract_changelog_is_machine_readable():
+    changelog = json.loads(PACK_REVIEW_CONTRACT_CHANGELOG.read_text(encoding="utf-8"))
+
+    assert changelog["schema_version"] == "skillbench.pack-review-contract-changelog.v1"
+    assert changelog["contract_id"] == "skillbench.pack-review-smoke-result"
+    assert changelog["latest_version"] == "0.5.31"
+    assert changelog["entries"][0]["version"] == changelog["latest_version"]
+    assert changelog["entries"][0]["compatibility"] in {"additive", "breaking", "documentation"}
+    assert "docs/schemas/pack-review-smoke-result.schema.json" in changelog["entries"][0]["schema"]
+    assert any("summary" in field for field in changelog["stable_fields"])
