@@ -40,4 +40,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.4 shipped `skillbench pr-comment` for reusable GitHub PR Markdown summaries across eval CI, lift reports, and harness matrix gate/efficiency reports.
 - v0.5.5 shipped `skillbench bundle` for publishable report bundles that combine static dashboard export, PR comment markdown, JUnit, SARIF, copied raw artifacts, and raw artifact manifests.
 - v0.5.6 shipped `.github/workflows/skillbench-bundles.yml` with first-class GitHub Actions examples for CI bundle uploads and harness matrix bundle publishing.
-- Next: add contribution-ready example eval packs for third-party skill authors.
+- v0.5.7 shipped contribution-ready example eval packs under `examples/eval_packs/` for third-party skill smoke and release gates.
+- Next: add an eval pack catalog/listing command so installed packs are discoverable from the CLI.

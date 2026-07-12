@@ -27,6 +27,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `pr-comment`: render reusable GitHub PR Markdown for `report.json`, `ci_result.json`, `lift_report.json`, or `matrix_report.json`.
    - `bundle`: build a publishable directory with static dashboard pages, PR comment Markdown, JUnit/SARIF when available, copied raw artifacts, and bundle manifests.
 3. Prefer an explicit eval set when the user provides one. Otherwise use SkillBench's default case generator.
+   - For third-party skill projects without their own eval set, start from `examples/eval_packs/generic-skill-smoke.json` or `examples/eval_packs/generic-skill-release.json`.
 4. Use `judge-only` for fast regression. Use `full-agent` only when the user needs behavior evidence from a real agent run and a safe agent command is configured. Use `--agent-runner custom-command|codex-cli|claude-cli` for audit metadata, `--agent-command` or runner environment variables for execution, and `--agent-timeout` or `SKILLBENCH_AGENT_TIMEOUT_SEC` to bound full-agent commands.
 5. Preserve all generated artifacts under `.skillbench/runs/` unless the user asks for another output directory.
 6. For focused checks, pass case selection filters to `eval`, `ci`, `lift`, `harness-matrix`, or `evo`: `--case-id`, `--include-tag`, `--exclude-tag`, `--case-mode`, and `--limit`.
@@ -44,7 +45,9 @@ From a plugin checkout:
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench eval <path-to-SKILL.md>
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench generate-cases <path-to-SKILL.md>
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases <path-to-eval-set.json>
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases plugins/skillbench/examples/eval_packs/generic-skill-smoke.json --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases plugins/skillbench/examples/eval_packs/generic-skill-release.json --include-tag safety --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench report .skillbench/runs/latest --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench lift <path-to-SKILL.md> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench harness-matrix <path-to-SKILL.md> --harness custom-command --harness codex-cli --json
@@ -72,6 +75,7 @@ python -m skillbench eval <path-to-SKILL.md>
 Every eval/evo run should produce:
 
 - `eval_set.json`
+- `examples/eval_packs/generic-skill-smoke.json` and `examples/eval_packs/generic-skill-release.json` as reusable third-party skill eval templates
 - `report.json`
 - `case_results.jsonl`
 - dimension-level `dimension_attributions` in case results and judge output artifacts

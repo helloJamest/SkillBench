@@ -24,6 +24,7 @@ From the repository root:
 python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
+skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness-cost custom-command=0.02 --min-total-lift 0.1 --require-all-pass
@@ -103,6 +104,32 @@ python -m skillbench generate-cases `
 ```
 
 Generated eval sets include `profile`, `source_skill_hash`, generator metadata, case tags, and should-trigger / should-not-trigger / ambiguous / safety cases.
+
+## Example Eval Packs
+
+Contribution-ready eval packs live in `examples/eval_packs/`:
+
+- `generic-skill-smoke.json`: fast checks for trigger routing, negative boundaries, safety, and evidence.
+- `generic-skill-release.json`: broader release gate coverage for trigger precision, ambiguous routing, workflow depth, tooling, safety, evidence, and maintainability.
+
+Use them directly or copy them into your own skill repo and adapt the case inputs:
+
+```powershell
+python -m skillbench validate-cases `
+  examples\eval_packs\generic-skill-smoke.json `
+  --json
+
+python -m skillbench list-cases `
+  examples\eval_packs\generic-skill-release.json `
+  --include-tag safety `
+  --json
+
+python -m skillbench ci `
+  path\to\SKILL.md `
+  --eval-set examples\eval_packs\generic-skill-release.json `
+  --min-score 8.0 `
+  --min-safety 8.0
+```
 
 ## Trusted Eval Metadata
 
@@ -332,6 +359,7 @@ python -m skillbench compare .skillbench\runs\baseline .skillbench\runs\candidat
 Every eval run writes:
 
 - `eval_set.json`
+- `examples/eval_packs/*.json` as reusable smoke and release eval templates for third-party skills
 - `report.json`
 - `case_results.jsonl`
 - `summary.md`

@@ -30,6 +30,8 @@ SAMPLE_SKILL = ROOT / "examples" / "skills" / "sample-skill" / "SKILL.md"
 EVAL_SET = ROOT / "examples" / "eval_sets" / "basic-skill-eval.json"
 BENCHMARK_FIXTURES = ROOT / "examples" / "benchmarks" / "skills"
 BENCHMARK_EVAL_SET = ROOT / "examples" / "benchmarks" / "eval_sets" / "skill-quality-benchmark.json"
+EVAL_PACKS_DIR = ROOT / "examples" / "eval_packs"
+GENERIC_SKILL_SMOKE_PACK = EVAL_PACKS_DIR / "generic-skill-smoke.json"
 PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
 BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
 
@@ -171,6 +173,38 @@ def test_validate_cases_rejects_duplicate_case_ids(tmp_path):
 
     assert result["passed"] is False
     assert any(error["type"] == "duplicate-case-id" for error in result["errors"])
+
+
+def test_example_eval_packs_are_valid_and_trusted():
+    pack_paths = sorted(EVAL_PACKS_DIR.glob("*.json"))
+
+    assert {path.name for path in pack_paths} >= {"generic-skill-smoke.json", "generic-skill-release.json"}
+    for path in pack_paths:
+        result = validate_eval_set(path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        case_types = {case["type"] for case in data["cases"]}
+        dimensions = {dimension for case in data["cases"] for dimension in case["dimensions"]}
+        assert result["passed"] is True
+        assert result["errors"] == []
+        assert not [warning for warning in result["warnings"] if warning["type"] in {"tags", "trust-metadata"}]
+        assert len(data["cases"]) >= 4
+        assert {"should-trigger", "should-not-trigger", "safety"} <= case_types
+        assert {"trigger_clarity", "trigger_precision", "workflow_specificity", "safety", "evidence_quality"} <= dimensions
+        assert all(case["tags"] for case in data["cases"])
+        assert all(case["category"] != "general" for case in data["cases"])
+        assert all(case["golden_behavior"] for case in data["cases"])
+        assert all(case["anti_patterns"] for case in data["cases"])
+        assert all(case["rubric_notes"] for case in data["cases"])
+
+
+def test_example_eval_pack_cli_lists_safety_subset(tmp_path, capsys):
+    exit_code = skillbench_main(["list-cases", str(GENERIC_SKILL_SMOKE_PACK), "--include-tag", "safety", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["eval_set_id"] == "generic-skill-smoke-v1"
+    assert data["case_count"] >= 1
+    assert all("safety" in case["tags"] for case in data["cases"])
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():
