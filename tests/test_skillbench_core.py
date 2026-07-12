@@ -11,7 +11,7 @@ if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
 
 from skillbench.dashboard import export_dashboard, render_dashboard_html
-from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
+from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, render_eval_pack_checklist, render_eval_pack_comparison_markdown, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
 from skillbench.benchmark import run_benchmark
@@ -485,6 +485,41 @@ def test_pack_compare_cli_text_mentions_key_changes(capsys):
     assert "Case delta: +4" in output
     assert "Added cases:" in output
     assert "release-positive-trigger" in output
+
+
+def test_render_eval_pack_comparison_markdown_summarizes_coverage_drift():
+    markdown = render_eval_pack_comparison_markdown(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+
+    assert "# SkillBench Eval Pack Comparison" in markdown
+    assert "generic-skill-smoke-v1 -> generic-skill-release-v1" in markdown
+    assert "| Cases | 4 | 8 | +4 |" in markdown
+    assert "## Added Cases" in markdown
+    assert "`release-positive-trigger`" in markdown
+    assert "## Removed Cases" in markdown
+    assert "`generic-trigger-routing`" in markdown
+    assert "## Coverage Changes" in markdown
+    assert "| Tags | ambiguous, maintainability, release, tooling, workflow | smoke |" in markdown
+
+
+def test_pack_compare_cli_writes_markdown_file(tmp_path, capsys):
+    output_path = tmp_path / "pack-comparison.md"
+
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    stdout = capsys.readouterr().out
+    markdown = output_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Comparison:" in stdout
+    assert "# SkillBench Eval Pack Comparison" in markdown
+    assert "release-workflow-depth" in markdown
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():

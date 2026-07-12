@@ -53,6 +53,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-packs --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench bootstrap-pack generic-skill-smoke-v1 --target <path-to-skill-project> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-checklist <path-to-eval-set.json> --output .skillbench/eval-pack-checklist.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-compare <left-eval-set.json> <right-eval-set.json> --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-compare <left-eval-set.json> <right-eval-set.json> --output .skillbench/eval-pack-comparison.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases plugins/skillbench/examples/eval_packs/generic-skill-smoke.json --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases plugins/skillbench/examples/eval_packs/generic-skill-release.json --include-tag safety --json
@@ -110,3 +111,4 @@ Every eval/evo run should produce:
 Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, matrix gate failures, harness efficiency, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a harness matrix view for `harness-matrix` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
 When `validate-cases` reports `hints`, surface the concrete field, suggestion, and example so contributors can repair pack metadata without reverse-engineering the schema.
 When `pack-checklist` is used, summarize the generated Markdown path and call out validation failures or repair hints that need action before CI.
+When `pack-compare --output` is used, summarize added/removed cases and coverage changes from the Markdown artifact path.

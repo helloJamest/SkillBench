@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, compare_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, render_eval_pack_comparison_markdown, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     pack_compare_parser.add_argument("left")
     pack_compare_parser.add_argument("right")
     pack_compare_parser.add_argument("--json", action="store_true")
+    pack_compare_parser.add_argument("--output", help="Write Markdown comparison to this path instead of stdout.")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -289,6 +290,11 @@ def main(argv: list[str] | None = None) -> int:
         comparison = compare_eval_packs(args.left, args.right)
         if args.json:
             print(json.dumps(comparison, ensure_ascii=False))
+        elif args.output:
+            output = Path(args.output)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(render_eval_pack_comparison_markdown(args.left, args.right), encoding="utf-8")
+            print(f"Comparison: {output}")
         else:
             print(_format_pack_comparison(comparison))
         return 0

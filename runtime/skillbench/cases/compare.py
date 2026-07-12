@@ -28,6 +28,48 @@ def compare_eval_packs(left_path: str | Path, right_path: str | Path) -> dict[st
     }
 
 
+def render_eval_pack_comparison_markdown(left_path: str | Path, right_path: str | Path) -> str:
+    comparison = compare_eval_packs(left_path, right_path)
+    left = comparison["left"]
+    right = comparison["right"]
+    lines = [
+        "# SkillBench Eval Pack Comparison",
+        "",
+        f"{left['eval_set_id']} -> {right['eval_set_id']}",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Left | Right | Delta |",
+        "| --- | ---: | ---: | ---: |",
+        f"| Cases | {left['case_count']} | {right['case_count']} | {comparison['case_delta']:+d} |",
+        "",
+        "## Added Cases",
+        "",
+    ]
+    lines.extend(_markdown_items(comparison["changes"]["cases"]["added"]))
+    lines.extend(["", "## Removed Cases", ""])
+    lines.extend(_markdown_items(comparison["changes"]["cases"]["removed"]))
+    lines.extend(
+        [
+            "",
+            "## Coverage Changes",
+            "",
+            "| Coverage | Added | Removed |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for label, key in [
+        ("Tags", "tags"),
+        ("Dimensions", "dimensions"),
+        ("Categories", "categories"),
+        ("Types", "types"),
+        ("Modes", "modes"),
+    ]:
+        change = comparison["changes"][key]
+        lines.append(f"| {label} | {_markdown_join(change['added'])} | {_markdown_join(change['removed'])} |")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _pack_summary(path: str | Path, eval_set) -> dict[str, Any]:
     return {
         "eval_set_id": eval_set.id,
@@ -51,3 +93,13 @@ def _set_change(left: list[str], right: list[str]) -> dict[str, list[str]]:
         "removed": sorted(left_set - right_set),
         "unchanged": sorted(left_set & right_set),
     }
+
+
+def _markdown_items(values: list[str]) -> list[str]:
+    if not values:
+        return ["- None."]
+    return [f"- `{value}`" for value in values]
+
+
+def _markdown_join(values: list[str]) -> str:
+    return ", ".join(values) if values else "-"

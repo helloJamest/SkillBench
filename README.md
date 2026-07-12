@@ -28,6 +28,7 @@ skillbench list-packs --json
 skillbench bootstrap-pack generic-skill-smoke-v1 --target path/to/your-skill --json
 skillbench pack-checklist examples/eval_packs/generic-skill-smoke.json --output .skillbench/eval-pack-checklist.md
 skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --json
+skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --output .skillbench/eval-pack-comparison.md
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -144,6 +145,11 @@ python -m skillbench pack-compare `
   examples\eval_packs\generic-skill-release.json `
   --json
 
+python -m skillbench pack-compare `
+  examples\eval_packs\generic-skill-smoke.json `
+  examples\eval_packs\generic-skill-release.json `
+  --output .skillbench\eval-pack-comparison.md
+
 python -m skillbench validate-cases `
   examples\eval_packs\generic-skill-smoke.json `
   --json
@@ -211,6 +217,8 @@ python -m skillbench pack-compare `
   examples\eval_packs\generic-skill-release.json `
   --json
 ```
+
+Use `--output .skillbench\eval-pack-comparison.md` to publish the same comparison as a human-readable Markdown artifact.
 
 List case IDs, tags, modes, and dimensions before choosing a focused run:
 
