@@ -116,3 +116,31 @@ schema = json.loads(Path("docs/schemas/pack-review-smoke-result.schema.json").re
 jsonschema.validate(instance=payload, schema=schema)
 PY
 ```
+
+## Contract-aware consumer example
+
+Use the `contract` block before schema validation when consuming smoke JSON from CI artifacts. This lets downstream tools fail early on an unexpected contract and follow the payload to the matching schema and changelog.
+
+```python
+import json
+from pathlib import Path
+
+import jsonschema
+
+payload_path = Path(".skillbench/pack-review-smoke-result.json")
+payload = json.loads(payload_path.read_text(encoding="utf-8"))
+
+expected_contract_id = "skillbench.pack-review-smoke-result"
+contract = payload["contract"]
+if contract["id"] != expected_contract_id:
+    raise SystemExit(f"Unsupported SkillBench contract: {contract['id']}")
+
+schema_path = Path(payload["contract"]["schema"])
+changelog_path = Path(payload["contract"]["changelog"])
+schema = json.loads(schema_path.read_text(encoding="utf-8"))
+changelog = json.loads(changelog_path.read_text(encoding="utf-8"))
+
+jsonschema.validate(instance=payload, schema=schema)
+print(f"Validated {contract['id']} v{contract['version']} using {schema_path}")
+print(f"Contract changelog latest version: {changelog['latest_version']}")
+```

@@ -2240,7 +2240,7 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert data["contract"]["id"] == "skillbench.pack-review-smoke-result"
-    assert data["contract"]["version"] == "0.5.32"
+    assert data["contract"]["version"] == "0.5.33"
     assert data["contract"]["schema"] == "docs/schemas/pack-review-smoke-result.schema.json"
     assert data["contract"]["changelog"] == "docs/schemas/pack-review-contracts.changelog.json"
     assert data["passed"] is True
@@ -2530,6 +2530,10 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "ValidationError" in guide
     assert "artifact_hints" in guide
     assert "pack-review-smoke-result.json" in guide
+    assert "Contract-aware consumer example" in guide
+    assert "expected_contract_id = \"skillbench.pack-review-smoke-result\"" in guide
+    assert "payload[\"contract\"][\"schema\"]" in guide
+    assert "payload[\"contract\"][\"changelog\"]" in guide
 
 
 def test_pack_review_smoke_workflow_validates_json_schema_and_uploads_bundle():
@@ -2566,7 +2570,7 @@ def test_pack_review_contract_changelog_is_machine_readable():
 
     assert changelog["schema_version"] == "skillbench.pack-review-contract-changelog.v1"
     assert changelog["contract_id"] == "skillbench.pack-review-smoke-result"
-    assert changelog["latest_version"] == "0.5.32"
+    assert changelog["latest_version"] == "0.5.33"
     assert changelog["entries"][0]["version"] == changelog["latest_version"]
     assert changelog["entries"][0]["compatibility"] in {"additive", "breaking", "documentation"}
     assert "docs/schemas/pack-review-smoke-result.schema.json" in changelog["entries"][0]["schema"]
