@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, load_eval_set_data, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -60,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
     bootstrap_parser.add_argument("--output", help="Output JSON path. Relative paths are resolved under --target.")
     bootstrap_parser.add_argument("--force", action="store_true", help="Overwrite the output file if it already exists.")
     bootstrap_parser.add_argument("--json", action="store_true")
+
+    checklist_parser = sub.add_parser("pack-checklist", help="Render a Markdown authoring checklist for an eval pack.")
+    checklist_parser.add_argument("eval_set")
+    checklist_parser.add_argument("--skill-path", help="Optional source skill for source hash validation hints.")
+    checklist_parser.add_argument("--output", help="Write Markdown checklist to this path instead of stdout.")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -262,6 +267,17 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False))
         else:
             print(_format_pack_bootstrap(result))
+        return 0
+
+    if args.command == "pack-checklist":
+        markdown = render_eval_pack_checklist(args.eval_set, skill_path=args.skill_path)
+        if args.output:
+            output = Path(args.output)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(markdown, encoding="utf-8")
+            print(f"Checklist: {output}")
+        else:
+            print(markdown, end="")
         return 0
 
     if args.command == "eval":

@@ -26,6 +26,7 @@ skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_s
 skillbench report .skillbench/runs/latest
 skillbench list-packs --json
 skillbench bootstrap-pack generic-skill-smoke-v1 --target path/to/your-skill --json
+skillbench pack-checklist examples/eval_packs/generic-skill-smoke.json --output .skillbench/eval-pack-checklist.md
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -133,6 +134,10 @@ python -m skillbench bootstrap-pack `
   --output evals\skill-release.json `
   --force
 
+python -m skillbench pack-checklist `
+  examples\eval_packs\generic-skill-smoke.json `
+  --output .skillbench\eval-pack-checklist.md
+
 python -m skillbench validate-cases `
   examples\eval_packs\generic-skill-smoke.json `
   --json
@@ -183,6 +188,14 @@ python -m skillbench validate-cases `
 ```
 
 Validation results include `hints` with machine-readable repair guidance for eval pack authors. Each hint includes `type`, `severity`, `field`, `message`, `suggestion`, and an `example`; case-specific hints also include `case_id`. In text mode, SkillBench prints matching `HINT [...]` lines after errors and warnings.
+
+Render a contributor-facing Markdown checklist before submitting a new or customized eval pack:
+
+```powershell
+python -m skillbench pack-checklist `
+  .skillbench\evals\my-skill-release.json `
+  --output .skillbench\eval-pack-checklist.md
+```
 
 List case IDs, tags, modes, and dimensions before choosing a focused run:
 

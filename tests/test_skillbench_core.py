@@ -11,7 +11,7 @@ if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
 
 from skillbench.dashboard import export_dashboard, render_dashboard_html
-from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
+from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, render_eval_pack_checklist, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
 from skillbench.benchmark import run_benchmark
@@ -377,6 +377,60 @@ def test_bootstrap_pack_cli_json_outputs_copy_summary(tmp_path, capsys):
     assert data["pack_id"] == "generic-skill-smoke-v1"
     assert Path(data["output"]).exists()
     assert data["output"].endswith(".skillbench/eval_packs/generic-skill-smoke-v1.json")
+
+
+def test_render_eval_pack_checklist_summarizes_builtin_pack():
+    markdown = render_eval_pack_checklist(GENERIC_SKILL_SMOKE_PACK)
+
+    assert "# SkillBench Eval Pack Authoring Checklist" in markdown
+    assert "Eval set: `generic-skill-smoke-v1`" in markdown
+    assert "Validation: PASS" in markdown
+    assert "## Coverage Summary" in markdown
+    assert "trigger_clarity" in markdown
+    assert "generic-trigger-routing" in markdown
+    assert "- [ ] Every case has a stable id and non-empty input." in markdown
+    assert "No repair hints." in markdown
+
+
+def test_render_eval_pack_checklist_includes_validation_hints(tmp_path):
+    eval_set_path = tmp_path / "bad-pack.json"
+    eval_set_path.write_text(
+        json.dumps(
+            {
+                "id": "bad-pack",
+                "cases": [
+                    {
+                        "id": "case-1",
+                        "input": "Evaluate a skill with missing metadata.",
+                        "difficulty": "impossible",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    markdown = render_eval_pack_checklist(eval_set_path)
+
+    assert "Eval set: `bad-pack`" in markdown
+    assert "Validation: FAIL" in markdown
+    assert "ERROR [difficulty]" in markdown
+    assert "WARN [trust-metadata]" in markdown
+    assert "HINT [difficulty] `cases[case-1].difficulty`" in markdown
+    assert "Use one of: easy, medium, hard." in markdown
+
+
+def test_pack_checklist_cli_writes_markdown_file(tmp_path, capsys):
+    output_path = tmp_path / "checklist.md"
+
+    exit_code = skillbench_main(["pack-checklist", str(GENERIC_SKILL_SMOKE_PACK), "--output", str(output_path)])
+
+    stdout = capsys.readouterr().out
+    markdown = output_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Checklist:" in stdout
+    assert "# SkillBench Eval Pack Authoring Checklist" in markdown
+    assert "generic-skill-smoke-v1" in markdown
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():

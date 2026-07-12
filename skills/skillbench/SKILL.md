@@ -15,6 +15,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `validate-cases`: validate eval set structure and optional source hash; use returned `hints` to explain repair suggestions for eval pack authors.
    - `list-packs`: discover bundled or custom eval pack catalogs before copying one into a skill repo.
    - `bootstrap-pack`: copy a bundled or custom eval pack into a target skill project for customization.
+   - `pack-checklist`: render a Markdown authoring checklist for reviewing an eval pack before CI.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.
@@ -49,6 +50,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench generate-cases <path-
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases <path-to-eval-set.json>
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-packs --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench bootstrap-pack generic-skill-smoke-v1 --target <path-to-skill-project> --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench pack-checklist <path-to-eval-set.json> --output .skillbench/eval-pack-checklist.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases plugins/skillbench/examples/eval_packs/generic-skill-smoke.json --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases plugins/skillbench/examples/eval_packs/generic-skill-release.json --include-tag safety --json
@@ -104,3 +106,4 @@ Every eval/evo run should produce:
 
 Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, matrix gate failures, harness efficiency, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a harness matrix view for `harness-matrix` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
 When `validate-cases` reports `hints`, surface the concrete field, suggestion, and example so contributors can repair pack metadata without reverse-engineering the schema.
+When `pack-checklist` is used, summarize the generated Markdown path and call out validation failures or repair hints that need action before CI.

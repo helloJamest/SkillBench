@@ -44,4 +44,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.8 shipped `skillbench list-packs` for discovering bundled or custom eval pack catalogs from the CLI.
 - v0.5.9 shipped `skillbench bootstrap-pack` for copying a selected eval pack into a target skill project for customization.
 - v0.5.10 shipped eval pack authoring hints and repair suggestions in `skillbench validate-cases`.
-- Next: add an eval pack authoring checklist command that renders a contributor-facing Markdown review guide from a pack.
+- v0.5.11 shipped `skillbench pack-checklist` for rendering contributor-facing Markdown review guides from eval packs.
+- Next: add a GitHub Actions example that publishes eval pack checklist artifacts for pack pull requests.
