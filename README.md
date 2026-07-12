@@ -338,7 +338,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -449,7 +449,7 @@ Every eval run writes:
 - `skillbench-comment.md` or `skillbench-pack-review-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
 - `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist and comparison artifacts
+- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts and posting a sticky eval pack review PR comment
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`

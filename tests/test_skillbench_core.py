@@ -2206,6 +2206,12 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "skillbench pack-compare" in workflow
     assert "skillbench pr-comment .skillbench/pack-checklists" in workflow
     assert "skillbench-pack-review-comment.md" in workflow
+    assert "issues: write" in workflow
+    assert "pull-requests: write" in workflow
+    assert "actions/github-script@v7" in workflow
+    assert "SkillBench Eval Pack Review" in workflow
+    assert "issues.updateComment" in workflow
+    assert "issues.createComment" in workflow
     assert "--output" in workflow
     assert "generic-skill-smoke-to-release-comparison.md" in workflow
     assert "generic-skill-smoke-to-release-comparison.json" in workflow

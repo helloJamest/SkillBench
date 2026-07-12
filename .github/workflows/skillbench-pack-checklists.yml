@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   eval-pack-checklists:
@@ -73,6 +75,25 @@ jobs:
         with:
           name: eval-pack-checklists
           path: .skillbench/pack-checklists
+
+      - name: Comment eval pack review summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "## SkillBench Eval Pack Review";
+            const body = fs.readFileSync(".skillbench/pack-checklists/skillbench-pack-review-comment.md", "utf8");
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number, per_page: 100 });
+            const existing = comments.data.find((comment) => comment.user?.type === "Bot" && comment.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
 
       - name: Fail when eval pack validation failed
         if: steps.eval_pack_checklists.outputs.status != '0'
