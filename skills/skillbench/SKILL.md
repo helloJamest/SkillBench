@@ -88,6 +88,7 @@ Every eval/evo run should produce:
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when using `bundle --output <dir>`
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
+- `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

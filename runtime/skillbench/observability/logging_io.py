@@ -22,7 +22,7 @@ def write_json(path: str | Path, value: Any) -> Path:
 
 
 def read_json(path: str | Path) -> Any:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
 
 def write_jsonl(path: str | Path, values: Iterable[Any]) -> Path:
@@ -62,4 +62,3 @@ def resolve_run_dir(value: str | Path) -> Path:
     if path.is_file() and path.name == "latest.txt":
         return Path(path.read_text(encoding="utf-8").strip())
     return path
-

@@ -231,6 +231,8 @@ python -m skillbench bundle `
 
 The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` copied run artifacts, `raw_artifacts.json`, `bundle_manifest.json`, and JUnit/SARIF files when the source run has `ci_result.json` or `matrix_ci_result.json`.
 
+For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
+
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
 ```powershell
@@ -338,6 +340,7 @@ Every eval run writes:
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `skillbench-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
+- `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`

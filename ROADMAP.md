@@ -39,4 +39,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.3 shipped matrix CI artifacts with `matrix_ci_result.json`, `--junit`, and `--sarif` for harness matrix gates.
 - v0.5.4 shipped `skillbench pr-comment` for reusable GitHub PR Markdown summaries across eval CI, lift reports, and harness matrix gate/efficiency reports.
 - v0.5.5 shipped `skillbench bundle` for publishable report bundles that combine static dashboard export, PR comment markdown, JUnit, SARIF, copied raw artifacts, and raw artifact manifests.
-- Next: add first-class release examples for GitHub Actions artifact uploads and matrix bundle publishing.
+- v0.5.6 shipped `.github/workflows/skillbench-bundles.yml` with first-class GitHub Actions examples for CI bundle uploads and harness matrix bundle publishing.
+- Next: add contribution-ready example eval packs for third-party skill authors.

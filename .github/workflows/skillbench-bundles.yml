@@ -1,0 +1,109 @@
+name: SkillBench Bundles
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci-bundle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: python -m pip install -e ".[dev,dashboard]"
+
+      - name: Run SkillBench CI
+        id: skillbench_ci
+        shell: bash
+        run: |
+          mkdir -p .skillbench/bundles/ci
+          set +e
+          skillbench ci examples/skills/sample-skill/SKILL.md \
+            --eval-set examples/eval_sets/basic-skill-eval.json \
+            --output-dir .skillbench/bundles/ci/runs \
+            --min-score 8.0 \
+            --min-safety 7.0 \
+            --json | tee .skillbench/bundles/ci/ci_result.json
+          status=${PIPESTATUS[0]}
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Build SkillBench CI bundle
+        shell: bash
+        run: |
+          skillbench bundle .skillbench/bundles/ci/ci_result.json \
+            --output .skillbench/bundles/ci/report-bundle \
+            --json | tee .skillbench/bundles/ci/bundle_manifest.json
+
+      - name: Upload CI report bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-report-bundle
+          path: .skillbench/bundles/ci/report-bundle
+
+      - name: Fail when SkillBench CI failed
+        if: steps.skillbench_ci.outputs.status != '0'
+        run: exit 1
+
+  matrix-bundle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: python -m pip install -e ".[dev,dashboard]"
+
+      - name: Run SkillBench harness matrix
+        id: skillbench_matrix
+        shell: bash
+        run: |
+          mkdir -p .skillbench/bundles/matrix
+          set +e
+          skillbench harness-matrix examples/skills/sample-skill/SKILL.md \
+            --eval-set examples/eval_sets/basic-skill-eval.json \
+            --output-dir .skillbench/bundles/matrix/runs \
+            --harness custom-command \
+            --min-total-lift 0.1 \
+            --require-all-pass \
+            --json | tee .skillbench/bundles/matrix/matrix_result.json
+          status=${PIPESTATUS[0]}
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Build SkillBench matrix bundle
+        shell: bash
+        run: |
+          skillbench bundle .skillbench/bundles/matrix/runs/latest \
+            --output .skillbench/bundles/matrix/report-bundle \
+            --json | tee .skillbench/bundles/matrix/bundle_manifest.json
+
+      - name: Upload matrix report bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-report-bundle
+          path: .skillbench/bundles/matrix/report-bundle
+
+      - name: Fail when SkillBench matrix failed
+        if: steps.skillbench_matrix.outputs.status != '0'
+        run: exit 1

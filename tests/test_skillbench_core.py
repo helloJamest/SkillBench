@@ -31,6 +31,7 @@ EVAL_SET = ROOT / "examples" / "eval_sets" / "basic-skill-eval.json"
 BENCHMARK_FIXTURES = ROOT / "examples" / "benchmarks" / "skills"
 BENCHMARK_EVAL_SET = ROOT / "examples" / "benchmarks" / "eval_sets" / "skill-quality-benchmark.json"
 PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
+BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
 
 
 def test_eval_writes_report(tmp_path):
@@ -1555,6 +1556,31 @@ def test_report_bundle_writes_dashboard_comment_ci_artifacts_and_raw_manifest(tm
     assert "SkillBench CI" in (tmp_path / "bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
 
 
+def test_report_bundle_reads_utf8_bom_external_ci_result_json(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "ci",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "ci-runs"),
+            "--min-score",
+            "9.9",
+            "--json",
+        ]
+    )
+    ci_result_path = tmp_path / "external-ci-result.json"
+    ci_result_path.write_text(capsys.readouterr().out, encoding="utf-8-sig")
+
+    manifest = build_report_bundle(ci_result_path, tmp_path / "bundle")
+
+    assert exit_code == 1
+    assert manifest["source"]["kind"] == "ci"
+    assert (tmp_path / "bundle" / "bundle_manifest.json").exists()
+    assert "SkillBench CI" in (tmp_path / "bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
+
+
 def test_report_bundle_cli_outputs_matrix_bundle_manifest(tmp_path, capsys):
     matrix_exit_code = skillbench_main(
         [
@@ -1637,3 +1663,19 @@ def test_pr_comment_workflow_runs_skillbench_ci_and_posts_sticky_comment():
     assert "skillbench pr-comment" in workflow
     assert "skillbench-comment.md" in workflow
     assert "github.rest.issues.updateComment" in workflow
+
+
+def test_bundle_workflow_uploads_ci_and_matrix_report_bundles():
+    workflow = BUNDLE_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "pull_request:" in workflow
+    assert "skillbench ci" in workflow
+    assert "skillbench harness-matrix" in workflow
+    assert "skillbench bundle" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "ci-report-bundle" in workflow
+    assert "matrix-report-bundle" in workflow
+    assert "if: always()" in workflow
+    assert "Fail when SkillBench CI failed" in workflow
+    assert "Fail when SkillBench matrix failed" in workflow
