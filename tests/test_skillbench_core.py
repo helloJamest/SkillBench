@@ -27,6 +27,7 @@ from skillbench.schemas import EvalCase, EvalSet
 
 
 SAMPLE_SKILL = ROOT / "examples" / "skills" / "sample-skill" / "SKILL.md"
+PLUGIN_SKILL = ROOT / "skills" / "skillbench" / "SKILL.md"
 EVAL_SET = ROOT / "examples" / "eval_sets" / "basic-skill-eval.json"
 BENCHMARK_FIXTURES = ROOT / "examples" / "benchmarks" / "skills"
 BENCHMARK_EVAL_SET = ROOT / "examples" / "benchmarks" / "eval_sets" / "skill-quality-benchmark.json"
@@ -2242,7 +2243,7 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert data["contract"]["id"] == "skillbench.pack-review-smoke-result"
-    assert data["contract"]["version"] == "0.5.37"
+    assert data["contract"]["version"] == "0.5.38"
     assert data["contract"]["schema"] == "docs/schemas/pack-review-smoke-result.schema.json"
     assert data["contract"]["changelog"] == "docs/schemas/pack-review-contracts.changelog.json"
     assert data["passed"] is True
@@ -2581,7 +2582,7 @@ def test_pack_review_contract_changelog_is_machine_readable():
 
     assert changelog["schema_version"] == "skillbench.pack-review-contract-changelog.v1"
     assert changelog["contract_id"] == "skillbench.pack-review-smoke-result"
-    assert changelog["latest_version"] == "0.5.37"
+    assert changelog["latest_version"] == "0.5.38"
     assert changelog["entries"][0]["version"] == changelog["latest_version"]
     assert changelog["entries"][0]["compatibility"] in {"additive", "breaking", "documentation"}
     assert "docs/schemas/pack-review-smoke-result.schema.json" in changelog["entries"][0]["schema"]
@@ -2616,3 +2617,11 @@ def test_pack_review_contract_maintainer_checklist_is_actionable():
     assert "python -m pytest tests -q" in checklist
     assert "pack-review-smoke --json" in checklist
     assert "CI contract version drift check" in checklist
+
+
+def test_plugin_skill_links_pack_review_contract_release_checklist():
+    skill = PLUGIN_SKILL.read_text(encoding="utf-8")
+
+    assert "docs/templates/pack-review-contract-release-note.md" in skill
+    assert "docs/maintainers/pack-review-contract-checklist.md" in skill
+    assert "pack review output contract changes" in skill
