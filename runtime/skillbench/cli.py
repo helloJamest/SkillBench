@@ -309,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.output:
             output = Path(args.output)
             output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(render_eval_pack_comparison_markdown(args.left, args.right), encoding="utf-8")
+            output.write_text(render_eval_pack_comparison_markdown(args.left, args.right, gate=gate if gate_requested else None), encoding="utf-8")
             print(f"Comparison: {output}")
         else:
             print(_format_pack_comparison(comparison))

@@ -520,6 +520,39 @@ def test_pack_compare_cli_writes_markdown_file(tmp_path, capsys):
     assert "Comparison:" in stdout
     assert "# SkillBench Eval Pack Comparison" in markdown
     assert "release-workflow-depth" in markdown
+    assert "## Coverage Drift Gate" in markdown
+    assert "**Status:** PASS" in markdown
+    assert "`right.metadata.coverage_drift_gate`" in markdown
+
+
+def test_pack_compare_cli_writes_gate_violations_to_markdown_file(tmp_path, capsys):
+    output_path = tmp_path / "pack-comparison.md"
+    policy_path = tmp_path / "gate-policy.json"
+    policy_path.write_text(
+        json.dumps({"coverage_drift_gate": {"fail_on_removed_tags": ["smoke"]}}),
+        encoding="utf-8",
+    )
+
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--gate-policy",
+            str(policy_path),
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    markdown = output_path.read_text(encoding="utf-8")
+    assert exit_code == 1
+    assert "Comparison:" in captured.out
+    assert "Coverage drift gate failed" in captured.out
+    assert "**Status:** FAIL" in markdown
+    assert f"`{policy_path}`" in markdown
+    assert "| tags | removed | smoke |" in markdown
 
 
 def test_pack_compare_cli_fails_when_required_tag_is_removed(capsys):

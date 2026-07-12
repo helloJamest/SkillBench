@@ -52,7 +52,7 @@ def evaluate_eval_pack_comparison_gate(
     return {"passed": not violations, "violations": violations}
 
 
-def render_eval_pack_comparison_markdown(left_path: str | Path, right_path: str | Path) -> str:
+def render_eval_pack_comparison_markdown(left_path: str | Path, right_path: str | Path, *, gate: dict[str, Any] | None = None) -> str:
     comparison = compare_eval_packs(left_path, right_path)
     left = comparison["left"]
     right = comparison["right"]
@@ -91,6 +91,19 @@ def render_eval_pack_comparison_markdown(left_path: str | Path, right_path: str 
     ]:
         change = comparison["changes"][key]
         lines.append(f"| {label} | {_markdown_join(change['added'])} | {_markdown_join(change['removed'])} |")
+    if gate is not None:
+        lines.extend(["", "## Coverage Drift Gate", "", f"**Status:** {'PASS' if gate.get('passed') else 'FAIL'}", ""])
+        lines.extend(["### Policy Sources", ""])
+        lines.extend(_markdown_items([str(source) for source in gate.get("policy_sources", [])]))
+        lines.extend(["", "### Violations", ""])
+        violations = gate.get("violations") or []
+        if violations:
+            lines.extend(["| Coverage | Reason | Values |", "| --- | --- | --- |"])
+            for violation in violations:
+                values = ", ".join(str(value) for value in violation.get("values", [])) or "-"
+                lines.append(f"| {violation.get('coverage', '-')} | {violation.get('reason', '-')} | {values} |")
+        else:
+            lines.append("- None.")
     return "\n".join(lines).rstrip() + "\n"
 
 

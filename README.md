@@ -218,7 +218,7 @@ python -m skillbench pack-compare `
   --json
 ```
 
-Use `--output .skillbench\eval-pack-comparison.md` to publish the same comparison as a human-readable Markdown artifact.
+Use `--output .skillbench\eval-pack-comparison.md` to publish the same comparison as a human-readable Markdown artifact. When a coverage drift gate is active, the Markdown includes gate status, policy sources, and violations.
 
 Add `metadata.coverage_drift_gate` to the right-hand eval pack, pass `--gate-policy policy.json`, or use `--fail-on-removed-dimensions`, `--fail-on-removed-tags`, `--fail-on-removed-categories`, `--fail-on-removed-types`, or `--fail-on-removed-modes` when a comparison should act as a CI coverage drift gate. Policies are merged from pack metadata, policy files, and CLI flags; the command emits JSON with a `gate` block and exits non-zero when a required coverage item was removed.
 
@@ -336,7 +336,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
