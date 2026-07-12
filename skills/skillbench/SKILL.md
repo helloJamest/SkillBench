@@ -14,6 +14,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `generate-cases`: create a deterministic eval set from `SKILL.md`.
    - `validate-cases`: validate eval set structure and optional source hash.
    - `list-packs`: discover bundled or custom eval pack catalogs before copying one into a skill repo.
+   - `bootstrap-pack`: copy a bundled or custom eval pack into a target skill project for customization.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.
@@ -47,6 +48,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench eval <path-to-SKILL.m
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench generate-cases <path-to-SKILL.md>
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases <path-to-eval-set.json>
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-packs --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench bootstrap-pack generic-skill-smoke-v1 --target <path-to-skill-project> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases plugins/skillbench/examples/eval_packs/generic-skill-smoke.json --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases plugins/skillbench/examples/eval_packs/generic-skill-release.json --include-tag safety --json

@@ -25,6 +25,7 @@ python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
 skillbench list-packs --json
+skillbench bootstrap-pack generic-skill-smoke-v1 --target path/to/your-skill --json
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -120,6 +121,17 @@ python -m skillbench list-packs --json
 
 python -m skillbench list-packs `
   --packs-dir examples\eval_packs
+
+python -m skillbench bootstrap-pack `
+  generic-skill-smoke-v1 `
+  --target path\to\your-skill `
+  --json
+
+python -m skillbench bootstrap-pack `
+  generic-skill-release-v1 `
+  --target path\to\your-skill `
+  --output evals\skill-release.json `
+  --force
 
 python -m skillbench validate-cases `
   examples\eval_packs\generic-skill-smoke.json `

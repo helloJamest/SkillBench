@@ -11,7 +11,7 @@ if str(RUNTIME) not in sys.path:
     sys.path.insert(0, str(RUNTIME))
 
 from skillbench.dashboard import export_dashboard, render_dashboard_html
-from skillbench.cases import CaseSelection, catalog_eval_packs, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
+from skillbench.cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, select_eval_cases, validate_eval_set, write_eval_set
 from skillbench.cli import main as skillbench_main
 from skillbench.config import SkillBenchConfig
 from skillbench.benchmark import run_benchmark
@@ -244,6 +244,76 @@ def test_list_packs_cli_text_mentions_builtin_packs(capsys):
     assert "generic-skill-smoke-v1" in output
     assert "generic-skill-release-v1" in output
     assert "PACK ID\tPROFILE\tCASES\tTAGS\tPURPOSE" in output
+
+
+def test_bootstrap_eval_pack_copies_pack_to_target_project(tmp_path):
+    result = bootstrap_eval_pack("generic-skill-smoke-v1", target_dir=tmp_path)
+
+    output_path = Path(result["output"])
+    assert output_path == tmp_path / ".skillbench" / "eval_packs" / "generic-skill-smoke-v1.json"
+    assert output_path.exists()
+    data = json.loads(output_path.read_text(encoding="utf-8"))
+    assert data["id"] == "generic-skill-smoke-v1"
+    assert result["case_count"] == 4
+    assert result["overwritten"] is False
+    assert Path(result["source"]).exists()
+
+
+def test_bootstrap_eval_pack_refuses_to_overwrite_without_force(tmp_path):
+    first = bootstrap_eval_pack("generic-skill-smoke-v1", target_dir=tmp_path)
+    output_path = Path(first["output"])
+    output_path.write_text("customized", encoding="utf-8")
+
+    try:
+        bootstrap_eval_pack("generic-skill-smoke-v1", target_dir=tmp_path)
+    except FileExistsError as exc:
+        assert str(output_path) in str(exc)
+    else:
+        raise AssertionError("expected FileExistsError")
+    assert output_path.read_text(encoding="utf-8") == "customized"
+
+    forced = bootstrap_eval_pack("generic-skill-smoke-v1", target_dir=tmp_path, force=True)
+    assert forced["overwritten"] is True
+    assert json.loads(output_path.read_text(encoding="utf-8"))["id"] == "generic-skill-smoke-v1"
+
+
+def test_bootstrap_eval_pack_accepts_custom_output_under_target(tmp_path):
+    result = bootstrap_eval_pack(
+        "generic-skill-release-v1",
+        target_dir=tmp_path,
+        output="evals/release.json",
+    )
+
+    output_path = tmp_path / "evals" / "release.json"
+    assert Path(result["output"]) == output_path
+    assert json.loads(output_path.read_text(encoding="utf-8"))["id"] == "generic-skill-release-v1"
+
+
+def test_bootstrap_eval_pack_rejects_unknown_pack(tmp_path):
+    try:
+        bootstrap_eval_pack("missing-pack", target_dir=tmp_path)
+    except ValueError as exc:
+        assert "missing-pack" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_bootstrap_pack_cli_json_outputs_copy_summary(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "bootstrap-pack",
+            "generic-skill-smoke-v1",
+            "--target",
+            str(tmp_path),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["pack_id"] == "generic-skill-smoke-v1"
+    assert Path(data["output"]).exists()
+    assert data["output"].endswith(".skillbench/eval_packs/generic-skill-smoke-v1.json")
 
 
 def test_case_selection_filters_by_tags_mode_and_limit():

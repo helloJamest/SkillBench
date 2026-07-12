@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .benchmark import run_benchmark
 from .calibrate import run_calibration
-from .cases import CaseSelection, catalog_eval_packs, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
+from .cases import CaseSelection, bootstrap_eval_pack, catalog_eval_packs, generate_eval_set, load_eval_set_data, select_eval_cases, validate_eval_set, write_eval_set
 from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
     packs_parser = sub.add_parser("list-packs", help="List bundled or custom eval pack catalogs.")
     packs_parser.add_argument("--packs-dir", help="Directory containing eval pack JSON files. Defaults to examples/eval_packs.")
     packs_parser.add_argument("--json", action="store_true")
+
+    bootstrap_parser = sub.add_parser("bootstrap-pack", help="Copy an eval pack into a target skill project.")
+    bootstrap_parser.add_argument("pack_id", help="Eval pack id from list-packs, for example generic-skill-smoke-v1.")
+    bootstrap_parser.add_argument("--target", required=True, help="Target skill project directory.")
+    bootstrap_parser.add_argument("--packs-dir", help="Directory containing eval pack JSON files. Defaults to examples/eval_packs.")
+    bootstrap_parser.add_argument("--output", help="Output JSON path. Relative paths are resolved under --target.")
+    bootstrap_parser.add_argument("--force", action="store_true", help="Overwrite the output file if it already exists.")
+    bootstrap_parser.add_argument("--json", action="store_true")
 
     eval_parser = sub.add_parser("eval", help="Run a single skill evaluation.")
     eval_parser.add_argument("skill_path")
@@ -232,6 +240,26 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(catalog, ensure_ascii=False))
         else:
             print(_format_pack_catalog(catalog))
+        return 0
+
+    if args.command == "bootstrap-pack":
+        try:
+            result = bootstrap_eval_pack(
+                args.pack_id,
+                target_dir=args.target,
+                packs_dir=args.packs_dir,
+                output=args.output,
+                force=args.force,
+            )
+        except (FileExistsError, ValueError) as exc:
+            if args.json:
+                print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+                return 1
+            parser.error(str(exc))
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(_format_pack_bootstrap(result))
         return 0
 
     if args.command == "eval":
@@ -649,6 +677,19 @@ def _format_pack_catalog(catalog: dict) -> str:
             )
         )
     return "\n".join(lines)
+
+
+def _format_pack_bootstrap(result: dict) -> str:
+    status = "overwritten" if result.get("overwritten") else "created"
+    return "\n".join(
+        [
+            f"Eval pack {status}: {result['pack_id']}",
+            f"Profile: {result.get('profile')}",
+            f"Cases: {result.get('case_count')}",
+            f"Source: {result.get('source')}",
+            f"Output: {result.get('output')}",
+        ]
+    )
 
 
 def _format_report(report: dict) -> str:

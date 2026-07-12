@@ -42,4 +42,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.6 shipped `.github/workflows/skillbench-bundles.yml` with first-class GitHub Actions examples for CI bundle uploads and harness matrix bundle publishing.
 - v0.5.7 shipped contribution-ready example eval packs under `examples/eval_packs/` for third-party skill smoke and release gates.
 - v0.5.8 shipped `skillbench list-packs` for discovering bundled or custom eval pack catalogs from the CLI.
-- Next: add a pack bootstrap command that copies a selected eval pack into a target skill project for customization.
+- v0.5.9 shipped `skillbench bootstrap-pack` for copying a selected eval pack into a target skill project for customization.
+- Next: add eval pack authoring validation hints and repair suggestions so contributors can fix pack metadata faster.
