@@ -90,3 +90,29 @@ skillbench bundle .skillbench/pack-checklists \
 ```
 
 Then open `.skillbench/pack-review-bundle/dashboard/index.html`.
+
+## Schema Validation Troubleshooting
+
+If the workflow fails in `Validate pack review smoke JSON schema`, download `eval-pack-review-smoke-result` and inspect `pack-review-smoke-result.json` first. The schema check validates the shape of the smoke output; it does not decide whether the pack review gate passed.
+
+Common failures:
+
+- `ValidationError: 'summary' is a required property`: the smoke command did not finish with a current SkillBench runtime, or the JSON file came from an older version. Re-run `skillbench pack-review-smoke ... --json` after upgrading.
+- `ValidationError` for `artifact_hints`: the bundle step did not produce the expected dashboard or raw artifact manifest paths. Check `summary.artifact_hints.dashboard`, `summary.artifact_hints.raw_artifacts`, and `summary.artifact_hints.pack_review_ci_result`.
+- JSON parse errors: the command output likely contains non-JSON text before or after the result. In CI, pipe only `--json` output to `pack-review-smoke-result.json`.
+- Schema validation passes but the job still fails: inspect `passed`, `summary.status`, `summary.top_failures`, and `raw/pack_review_ci_result.json` in the uploaded bundle. That means the output shape is valid, but validation or coverage drift gates failed.
+
+For local debugging, run:
+
+```bash
+python -m json.tool .skillbench/pack-review-smoke-result.json
+python - <<'PY'
+import json
+from pathlib import Path
+import jsonschema
+
+payload = json.loads(Path(".skillbench/pack-review-smoke-result.json").read_text(encoding="utf-8"))
+schema = json.loads(Path("docs/schemas/pack-review-smoke-result.schema.json").read_text(encoding="utf-8"))
+jsonschema.validate(instance=payload, schema=schema)
+PY
+```

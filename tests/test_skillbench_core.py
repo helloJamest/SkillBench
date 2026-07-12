@@ -2519,6 +2519,10 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "pack_review_ci_result.json" in guide
     assert "actions/download-artifact" in guide
     assert "coverage drift" in guide.lower()
+    assert "Schema Validation Troubleshooting" in guide
+    assert "ValidationError" in guide
+    assert "artifact_hints" in guide
+    assert "pack-review-smoke-result.json" in guide
 
 
 def test_pack_review_smoke_workflow_validates_json_schema_and_uploads_bundle():
