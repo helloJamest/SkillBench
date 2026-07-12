@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skillbench"
-version = "0.4.0"
-description = "Evaluate and evolve Codex skills with eval cases, judge feedback, GEPA-style loops, and optional Comet tracking."
+version = "0.5.0"
+description = "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, harness matrices, GEPA-style loops, and optional Comet tracking."
 requires-python = ">=3.10"
 authors = [{ name = "SkillBench Contributors" }]
 license = { text = "MIT" }

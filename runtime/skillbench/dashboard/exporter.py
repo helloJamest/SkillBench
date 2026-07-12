@@ -16,6 +16,7 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
     report_path = run_path / "report.json"
     evolution_path = run_path / "evolution.json"
     lift_path = run_path / "lift_report.json"
+    matrix_path = run_path / "matrix_report.json"
     if report_path.exists():
         report = read_json(report_path)
         index_html = _rewrite_report_index(render_dashboard_html(run_path), report)
@@ -46,8 +47,12 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
         index_html = index_html.replace('href="/artifacts/lift_report.json"', 'href="artifacts/lift_report.json/index.html"')
         _write_page(output / "index.html", index_html, pages, output)
         _write_artifact_pages(run_path, output, pages)
+    elif matrix_path.exists():
+        index_html = _rewrite_matrix_index(run_path, render_dashboard_html(run_path))
+        _write_page(output / "index.html", index_html, pages, output)
+        _write_artifact_pages(run_path, output, pages)
     else:
-        raise FileNotFoundError(f"No report.json, evolution.json, or lift_report.json found in {run_path}")
+        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, or matrix_report.json found in {run_path}")
 
     manifest = {
         "run_dir": str(run_path),
@@ -132,4 +137,13 @@ def _rewrite_evolution_index(html: str, evolution: dict[str, Any]) -> str:
             f'href="evolution/rounds/{round_index}/index.html"',
         )
     html = html.replace('href="/timeline"', 'href="timeline/index.html"')
+    return html
+
+
+def _rewrite_matrix_index(run_path: Path, html: str) -> str:
+    html = html.replace('href="/artifacts"', 'href="artifacts/index.html"')
+    html = html.replace('href="/artifacts/matrix_report.json"', 'href="artifacts/matrix_report.json/index.html"')
+    for artifact in _iter_artifacts(run_path):
+        rel = _artifact_rel(run_path, artifact)
+        html = html.replace(f'href="/artifacts/{quote(rel, safe="/")}"', f'href="artifacts/{rel}/index.html"')
     return html

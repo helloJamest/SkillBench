@@ -16,6 +16,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.
+   - `harness-matrix`: run `lift` across multiple agent runner adapters and rank the measured utility.
    - `evo`: run select, execute, reflect, mutate, accept over candidate documents.
    - `calibrate`: repeat eval runs and summarize judge stability before CI or research comparisons.
    - `compare`: compare existing reports or run directories.
@@ -26,7 +27,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
 3. Prefer an explicit eval set when the user provides one. Otherwise use SkillBench's default case generator.
 4. Use `judge-only` for fast regression. Use `full-agent` only when the user needs behavior evidence from a real agent run and a safe agent command is configured. Use `--agent-runner custom-command|codex-cli|claude-cli` for audit metadata, `--agent-command` or runner environment variables for execution, and `--agent-timeout` or `SKILLBENCH_AGENT_TIMEOUT_SEC` to bound full-agent commands.
 5. Preserve all generated artifacts under `.skillbench/runs/` unless the user asks for another output directory.
-6. For focused checks, pass case selection filters to `eval`, `ci`, `lift`, or `evo`: `--case-id`, `--include-tag`, `--exclude-tag`, `--case-mode`, and `--limit`.
+6. For focused checks, pass case selection filters to `eval`, `ci`, `lift`, `harness-matrix`, or `evo`: `--case-id`, `--include-tag`, `--exclude-tag`, `--case-mode`, and `--limit`.
 7. If a full-agent case times out, inspect the recorded `agent_runs/<case_id>/` artifacts; SkillBench records the timeout as evidence instead of treating it as a framework crash.
 8. If `custom-command` judge output fails, inspect `evidence.judge_error` in the case result and the persisted judge input/output artifacts.
 
@@ -41,6 +42,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench validate-cases <path-
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench list-cases <path-to-eval-set.json> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench report .skillbench/runs/latest --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench lift <path-to-SKILL.md> --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench harness-matrix <path-to-SKILL.md> --harness custom-command --harness codex-cli --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench evo <path-to-SKILL.md> --rounds 3
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench calibrate <path-to-SKILL.md> --samples 3 --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench benchmark --json
@@ -66,6 +68,7 @@ Every eval/evo run should produce:
 - dimension-level `dimension_attributions` in case results and judge output artifacts
 - candidate snapshots
 - `lift_report.json` for `lift` runs, rendered in the dashboard and exported as static HTML
+- `matrix_report.json` for `harness-matrix` runs, rendered in the dashboard and exported as static HTML
 - `timeline.json` for `evo` runs, rendered at `/timeline` and exported as `timeline/index.html`
 - normalized `agent_audit.json` for each full-agent case
 - optional `reflection.json` and mutation records
@@ -78,4 +81,4 @@ Every eval/evo run should produce:
 - `benchmark.json` when running bundled quality fixtures
 - `manifest.json` and static HTML pages when exporting dashboards
 
-Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.
+Use the dashboard or report files to explain failures with case IDs, dimensions, evidence, judge suggestions, raw artifacts, skill-lift deltas, harness ranking, comparison deltas, and evolution timeline decisions. Dashboard report pages include case filters, an artifact browser at `/artifacts`, a lift report view for `lift` runs, a harness matrix view for `harness-matrix` runs, a timeline view for `evo` runs, and a comparison view when `comparison.json` exists.

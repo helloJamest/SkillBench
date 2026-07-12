@@ -13,6 +13,7 @@ Each `skillbench evo` run produces:
 - An eval set describing which cases validate the skill document.
 - A report with dimension scores, worst-case analysis, attribution, and suggestions.
 - A skill-lift A/B report comparing with-skill and without-skill runs.
+- A harness matrix ranking multiple agent adapters by measured skill lift.
 - A local dashboard, evolution timeline, and optional Comet ML experiment artifacts for traceability.
 
 ## Quick Start
@@ -24,6 +25,7 @@ python -m pip install -e ".[dev,dashboard]"
 skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json
 skillbench report .skillbench/runs/latest
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
+skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
 skillbench benchmark --json
 ```
 
@@ -47,6 +49,7 @@ python -m skillbench eval examples\skills\sample-skill\SKILL.md --eval-set examp
 - `judge-only`: Static, low-cost evaluation of eval cases against the skill document.
 - `full-agent`: Runs a configured agent command, captures evidence, then judges the behavior.
 - `lift`: Runs with-skill vs without-skill A/B evaluation and reports score deltas.
+- `harness-matrix`: Runs `lift` across multiple agent adapters and ranks the measured skill utility.
 - `evo`: Runs select, execute, reflect, mutate, and accept over a candidate pool.
 
 In `full-agent` mode, command timeouts are recorded as case evidence instead of aborting the whole run. The case directory still contains `stdout.txt`, `stderr.txt`, `exit_code.txt`, `files.json`, and `agent_audit.json`; `exit_code.txt` is set to `timeout`.
@@ -219,6 +222,21 @@ python -m skillbench lift `
 
 `lift` writes `lift_report.json` with baseline and candidate report paths, total lift, dimension lifts, case-level deltas, a deterministic bootstrap interval over case deltas, and a `HELPS`, `PLACEBO`, or `HARMS` verdict. Pass `--baseline-skill <path>` to compare against an explicit baseline document instead of the generated no-skill baseline.
 
+## Harness Matrix
+
+Use `harness-matrix` to compare how much a skill helps under different agent runner adapters:
+
+```powershell
+python -m skillbench harness-matrix `
+  examples\skills\sample-skill\SKILL.md `
+  --eval-set examples\eval_sets\basic-skill-eval.json `
+  --harness custom-command `
+  --harness codex-cli `
+  --json
+```
+
+The matrix command runs one `lift` evaluation per harness, writes each nested `lift_report.json`, then writes a top-level `matrix_report.json` with harness scores, ranking, best harness, and links to the underlying lift artifacts. It accepts the same case selection filters as `eval`, `ci`, `lift`, and `evo`.
+
 ## Judge Calibration
 
 Use `calibrate` to run the same skill/eval set repeatedly and measure judge stability before trusting a CI threshold or research comparison:
@@ -265,6 +283,7 @@ Every eval run writes:
 - `case_results.jsonl`
 - `summary.md`
 - `lift_report.json` for `skillbench lift` A/B runs
+- `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
@@ -277,6 +296,7 @@ When a custom judge fails, the same page shows a dedicated `Judge Error` section
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
 The report page also includes case filters. You can combine query parameters such as `?failed=1&dimension=safety&type=safety&q=approval` to focus the case table while preserving the run summary.
 Lift dashboards render `lift_report.json` with with-skill / without-skill totals, dimension lift, case lift, and verdict evidence.
+Harness matrix dashboards render `matrix_report.json` with harness ranking, best harness, lift verdicts, and links to each nested lift report.
 Evolution dashboards expose `/timeline` to trace each select, reflect, mutate, and accept round with selected/mutated candidates, scores, deltas, reflection summaries, mutation summaries, and decision reasons.
 
 Print a compact report for humans, or the persisted JSON for scripts:
@@ -295,7 +315,7 @@ python -m skillbench export-dashboard `
 ```
 
 Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
-Static exports include `artifacts/index.html`, raw artifact detail pages, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
+Static exports include `artifacts/index.html`, raw artifact detail pages, harness matrix pages for `matrix_report.json`, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
 
 ## Optional Integrations
 

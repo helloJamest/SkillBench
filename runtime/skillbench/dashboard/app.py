@@ -14,6 +14,7 @@ def render_dashboard_html(run_dir: str | Path) -> str:
     route_case_id: str | None = None
     route_comparison = False
     route_lift = False
+    route_matrix = False
     route_timeline = False
     route_round_index: int | None = None
     route_artifact: Path | None = None
@@ -27,6 +28,9 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         requested_path = requested_path.parent
     if requested_path.name == "lift" and not _looks_like_run_dir(requested_path):
         route_lift = True
+        requested_path = requested_path.parent
+    if requested_path.name == "matrix" and not _looks_like_run_dir(requested_path):
+        route_matrix = True
         requested_path = requested_path.parent
     if requested_path.name == "timeline" and not _looks_like_run_dir(requested_path):
         route_timeline = True
@@ -53,6 +57,11 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         if lift_path.exists():
             return _render_lift(run_path, read_json(lift_path))
         return _page("Lift report not found", "<p>No lift_report.json found.</p>")
+    if route_matrix:
+        matrix_path = run_path / "matrix_report.json"
+        if matrix_path.exists():
+            return _render_matrix(run_path, read_json(matrix_path))
+        return _page("Harness matrix not found", "<p>No matrix_report.json found.</p>")
     if route_timeline:
         evolution_path = run_path / "evolution.json"
         if evolution_path.exists():
@@ -70,7 +79,10 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         lift_path = run_path / "lift_report.json"
         if lift_path.exists():
             return _render_lift(run_path, read_json(lift_path))
-        raise FileNotFoundError(f"No report.json or evolution.json found in {run_path}")
+        matrix_path = run_path / "matrix_report.json"
+        if matrix_path.exists():
+            return _render_matrix(run_path, read_json(matrix_path))
+        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, or matrix_report.json found in {run_path}")
     report = read_json(report_path)
     if route_case_id:
         case = _find_case(report, route_case_id)
@@ -149,6 +161,13 @@ def create_app(run_dir: str | Path):
             return JSONResponse(read_json(lift_path))
         return JSONResponse({"error": "lift_report.json not found"}, status_code=404)
 
+    @app.get("/api/matrix")
+    def api_matrix():
+        matrix_path = run_path / "matrix_report.json"
+        if matrix_path.exists():
+            return JSONResponse(read_json(matrix_path))
+        return JSONResponse({"error": "matrix_report.json not found"}, status_code=404)
+
     @app.get("/artifacts", response_class=HTMLResponse)
     def artifacts_index():
         return _render_artifacts_index(run_path)
@@ -184,6 +203,13 @@ def create_app(run_dir: str | Path):
         if lift_path.exists():
             return _render_lift(run_path, read_json(lift_path))
         return _page("Lift report not found", "<p>No lift_report.json found.</p>")
+
+    @app.get("/matrix", response_class=HTMLResponse)
+    def matrix():
+        matrix_path = run_path / "matrix_report.json"
+        if matrix_path.exists():
+            return _render_matrix(run_path, read_json(matrix_path))
+        return _page("Harness matrix not found", "<p>No matrix_report.json found.</p>")
 
     @app.get("/cases/{case_id}", response_class=HTMLResponse)
     def case_detail(case_id: str):
@@ -329,6 +355,73 @@ def _render_lift(run_path: Path, report: dict) -> str:
     return _page("SkillBench Lift Report", body)
 
 
+def _render_matrix(run_path: Path, report: dict) -> str:
+    ranking = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('rank', '')))}</td>"
+        f"<td>{html.escape(str(item.get('runner_name', '')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('total_lift'), signed=True))}</td>"
+        f"<td>{html.escape(_format_number(item.get('mean_case_lift'), signed=True))}</td>"
+        f"<td>{html.escape(str(item.get('verdict', '')))}</td>"
+        f"<td>{_matrix_lift_report_link(run_path, item)}</td>"
+        "</tr>"
+        for item in report.get("ranking", [])
+        if item.get("lift_report_json")
+    )
+    if not ranking:
+        ranking = "<tr><td colspan=\"6\">No harness ranking data.</td></tr>"
+    harnesses = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('runner_name', '')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('baseline_total_score')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('candidate_total_score')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('total_lift'), signed=True))}</td>"
+        f"<td>{html.escape(str(item.get('candidate_worst_case_id', '')))}</td>"
+        "</tr>"
+        for item in report.get("harnesses", [])
+    )
+    if not harnesses:
+        harnesses = "<tr><td colspan=\"5\">No harness data.</td></tr>"
+    body = f"""
+    <section class="summary">
+      <h2>{html.escape(str(report.get('run_id', 'matrix')))}</h2>
+      <p>Best harness <strong>{html.escape(str(report.get('best_harness', '')))}</strong> Harnesses <strong>{html.escape(str(report.get('harness_count', 0)))}</strong></p>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/artifacts">Browse raw artifacts</a> <a href="/artifacts/matrix_report.json">Open raw matrix_report.json</a></p>
+    </section>
+    <section>
+      <h2>Harness Ranking</h2>
+      <table><thead><tr><th>Rank</th><th>Harness</th><th>Total Lift</th><th>Mean Case Lift</th><th>Verdict</th><th>Artifact</th></tr></thead><tbody>{ranking}</tbody></table>
+    </section>
+    <section>
+      <h2>Harness Scores</h2>
+      <table><thead><tr><th>Harness</th><th>Baseline</th><th>Candidate</th><th>Lift</th><th>Worst Case</th></tr></thead><tbody>{harnesses}</tbody></table>
+    </section>
+    """
+    return _page("SkillBench Harness Matrix", body)
+
+
+def _matrix_lift_report_link(run_path: Path, item: dict) -> str:
+    value = item.get("lift_report_json", "")
+    if not value:
+        return ""
+    path = Path(str(value))
+    try:
+        rel = path.relative_to(run_path).as_posix()
+    except ValueError:
+        root = run_path.resolve()
+        candidates = [path.resolve()] if path.is_absolute() else [(Path.cwd() / path).resolve(), (run_path / path).resolve()]
+        for candidate in candidates:
+            try:
+                rel = candidate.relative_to(root).as_posix()
+                break
+            except ValueError:
+                continue
+        else:
+            return html.escape(str(value))
+    return f'<a href="/artifacts/{quote(rel, safe="/")}">lift report</a>'
+
+
 def _format_number(value: object, signed: bool = False) -> str:
     if isinstance(value, bool):
         return str(value)
@@ -352,7 +445,7 @@ def _load_timeline(run_path: Path, evolution: dict) -> dict:
 
 
 def _looks_like_run_dir(path: Path) -> bool:
-    return any((path / name).exists() for name in ["report.json", "evolution.json", "lift_report.json"])
+    return any((path / name).exists() for name in ["report.json", "evolution.json", "lift_report.json", "matrix_report.json"])
 
 
 def _split_path_query(value: str | Path) -> tuple[Path, dict[str, str]]:

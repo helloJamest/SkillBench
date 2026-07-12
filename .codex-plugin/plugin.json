@@ -1,7 +1,7 @@
 {
   "name": "skillbench",
-  "version": "0.4.0",
-  "description": "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, GEPA-style optimization, and optional Comet tracking.",
+  "version": "0.5.0",
+  "description": "Evaluate, compare, trace, and evolve Codex skills with eval cases, judge feedback, harness matrices, GEPA-style optimization, and optional Comet tracking.",
   "author": {
     "name": "helloJamest",
     "email": "798233329@qq.com",
@@ -33,6 +33,7 @@
       "Evaluate this skill with SkillBench.",
       "Run skillbench evo on this SKILL.md.",
       "Measure skill lift against a no-skill baseline.",
+      "Run a harness matrix across Codex and Claude agent adapters.",
       "Compare these two skill versions."
     ],
     "brandColor": "#2563EB"

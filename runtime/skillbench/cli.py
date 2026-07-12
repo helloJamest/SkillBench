@@ -11,6 +11,7 @@ from .config import SkillBenchConfig
 from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
 from .lift import run_lift
+from .matrix import run_harness_matrix
 from .observability.logging_io import read_json, resolve_run_dir
 from .reports import build_ci_result, build_comparison, write_ci_result, write_comparison, write_junit_xml, write_sarif_report
 from .runners import AGENT_RUNNERS
@@ -78,6 +79,22 @@ def build_parser() -> argparse.ArgumentParser:
     lift_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
     lift_parser.add_argument("--json", action="store_true")
     _add_case_selection_args(lift_parser)
+
+    matrix_parser = sub.add_parser("harness-matrix", help="Run lift across multiple agent harnesses and rank them.")
+    matrix_parser.add_argument("skill_path")
+    matrix_parser.add_argument("--eval-set")
+    matrix_parser.add_argument("--output-dir")
+    matrix_parser.add_argument("--harness", action="append", choices=AGENT_RUNNERS, dest="harnesses", help="Agent runner to include. Repeat for multiple harnesses.")
+    matrix_parser.add_argument("--baseline-skill", help="Optional explicit no-skill baseline document.")
+    matrix_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
+    matrix_parser.add_argument("--min-lift", type=float, default=0.1)
+    matrix_parser.add_argument("--bootstrap-samples", type=int, default=500)
+    matrix_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
+    matrix_parser.add_argument("--judge-command", default=None)
+    matrix_parser.add_argument("--agent-command", default=None)
+    matrix_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
+    matrix_parser.add_argument("--json", action="store_true")
+    _add_case_selection_args(matrix_parser)
 
     ci_parser = sub.add_parser("ci", help="Run evaluation and fail on thresholds.")
     ci_parser.add_argument("skill_path")
@@ -245,6 +262,34 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False))
         else:
             print(_format_lift(result))
+        return 0
+
+    if args.command == "harness-matrix":
+        config = SkillBenchConfig.from_env(args.output_dir)
+        if args.judge_backend:
+            config.judge_backend = args.judge_backend
+        if args.judge_command:
+            config.judge_command = args.judge_command
+        if args.agent_command:
+            config.agent_command = args.agent_command
+        if args.agent_timeout is not None:
+            config.agent_timeout_sec = args.agent_timeout
+        result = run_harness_matrix(
+            args.skill_path,
+            eval_set_path=args.eval_set,
+            output_dir=args.output_dir,
+            harnesses=args.harnesses,
+            baseline_skill_path=args.baseline_skill,
+            config=config,
+            mode_override=args.mode,
+            min_lift=args.min_lift,
+            bootstrap_samples=args.bootstrap_samples,
+            **_case_selection_kwargs(args),
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(_format_harness_matrix(result))
         return 0
 
     if args.command == "ci":
@@ -521,6 +566,21 @@ def _format_lift(result: dict) -> str:
         f"Mean case lift: {result['mean_case_lift']:+.3f}",
         f"Lift report: {result['artifacts']['lift_report_json']}",
     ]
+    return "\n".join(lines)
+
+
+def _format_harness_matrix(result: dict) -> str:
+    lines = [
+        f"Harness matrix: {result['run_id']}",
+        f"Best harness: {result.get('best_harness')}",
+        "Ranking:",
+    ]
+    for item in result.get("ranking", []):
+        lines.append(
+            f"  {item['rank']}. {item['runner_name']} "
+            f"total_lift={item['total_lift']:+.3f} verdict={item['verdict']}"
+        )
+    lines.append(f"Matrix report: {result['artifacts']['matrix_report_json']}")
     return "\n".join(lines)
 
 

@@ -29,3 +29,9 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 ## v0.4.x: Skill Utility and Lift
 
 - v0.4.0 shipped `skillbench lift` for with-skill vs without-skill A/B evaluation, `lift_report.json`, dashboard rendering, static export, case deltas, dimension lift, and deterministic bootstrap intervals.
+
+## v0.5.x: Cross-Harness Governance
+
+- v0.5.0 shipped `skillbench harness-matrix` to run skill-lift A/B evaluation across multiple agent runner adapters.
+- v0.5.0 shipped top-level `matrix_report.json`, harness ranking, best-harness selection, dashboard rendering, and static dashboard export for cross-harness lift evidence.
+- Next: add cost and latency normalization, per-harness confidence summaries, and CI policies that can gate on minimum lift across selected harnesses.

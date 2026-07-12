@@ -19,6 +19,7 @@ from skillbench.calibrate import run_calibration
 from skillbench.evolve import run_evolution
 from skillbench.evaluate_skill import run_evaluation
 from skillbench.lift import run_lift
+from skillbench.matrix import run_harness_matrix
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
 from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
@@ -1224,6 +1225,81 @@ def test_export_dashboard_writes_lift_static_pages(tmp_path):
     assert "index.html" in manifest["pages"]
     assert "artifacts/lift_report.json/index.html" in manifest["pages"]
     assert "SkillBench Lift Report" in (tmp_path / "lift-site" / "index.html").read_text(encoding="utf-8")
+
+
+def test_harness_matrix_writes_ranked_report(tmp_path):
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=EVAL_SET,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command", "codex-cli"],
+    )
+
+    report_path = Path(result["artifacts"]["matrix_report_json"])
+    assert report_path.exists()
+    data = json.loads(report_path.read_text(encoding="utf-8"))
+    assert data["run_id"] == result["run_id"]
+    assert data["schema_version"] == "skillbench.harness-matrix.v1"
+    assert [item["runner_name"] for item in data["harnesses"]] == ["custom-command", "codex-cli"]
+    assert len(data["ranking"]) == 2
+    assert data["best_harness"] in {"custom-command", "codex-cli"}
+    assert all(Path(item["lift_report_json"]).exists() for item in data["harnesses"])
+    assert all("total_lift" in item and "verdict" in item for item in data["harnesses"])
+
+
+def test_harness_matrix_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "harness-matrix",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "matrix"),
+            "--harness",
+            "custom-command",
+            "--harness",
+            "codex-cli",
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert len(data["harnesses"]) == 2
+    assert Path(data["artifacts"]["matrix_report_json"]).exists()
+
+
+def test_dashboard_renders_harness_matrix_report(tmp_path):
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=EVAL_SET,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command", "codex-cli"],
+    )
+    run_dir = Path(result["artifacts"]["matrix_report_json"]).parent
+
+    html = render_dashboard_html(run_dir)
+
+    assert "SkillBench Harness Matrix" in html
+    assert "Harness Ranking" in html
+    assert "custom-command" in html
+    assert "codex-cli" in html
+
+
+def test_export_dashboard_writes_harness_matrix_static_pages(tmp_path):
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=EVAL_SET,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command", "codex-cli"],
+    )
+    run_dir = Path(result["artifacts"]["matrix_report_json"]).parent
+    manifest = export_dashboard(run_dir, tmp_path / "matrix-site")
+
+    assert "index.html" in manifest["pages"]
+    assert "artifacts/matrix_report.json/index.html" in manifest["pages"]
+    assert "SkillBench Harness Matrix" in (tmp_path / "matrix-site" / "index.html").read_text(encoding="utf-8")
 
 
 def test_pr_comment_workflow_runs_skillbench_ci_and_posts_sticky_comment():
