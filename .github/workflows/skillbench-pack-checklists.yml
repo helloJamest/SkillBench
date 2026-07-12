@@ -49,6 +49,12 @@ jobs:
               status=1
             fi
           done
+          if [ -f examples/eval_packs/generic-skill-smoke.json ] && [ -f examples/eval_packs/generic-skill-release.json ]; then
+            skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
+              --output .skillbench/pack-checklists/generic-skill-smoke-to-release-comparison.md
+            skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
+              --json | tee .skillbench/pack-checklists/generic-skill-smoke-to-release-comparison.json
+          fi
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           exit 0
 

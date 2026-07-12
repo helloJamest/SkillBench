@@ -102,7 +102,7 @@ Every eval/evo run should produce:
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown and validation JSON
+- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, and smoke-to-release comparison Markdown/JSON
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

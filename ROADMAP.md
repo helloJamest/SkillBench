@@ -48,4 +48,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.12 shipped `.github/workflows/skillbench-pack-checklists.yml` for publishing eval pack checklist artifacts on pack pull requests.
 - v0.5.13 shipped `skillbench pack-compare` for reviewing case, tag, dimension, category, type, and mode coverage changes across pack versions.
 - v0.5.14 shipped Markdown rendering for eval pack comparisons via `skillbench pack-compare --output`.
-- Next: publish eval pack comparison Markdown artifacts from the pack checklist GitHub Actions workflow.
+- v0.5.15 shipped eval pack comparison Markdown/JSON artifacts from the pack checklist GitHub Actions workflow.
+- Next: add configurable coverage drift gates so CI can fail when required tags, dimensions, categories, or safety cases are removed.

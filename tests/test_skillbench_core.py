@@ -2037,6 +2037,10 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "workflow_dispatch:" in workflow
     assert "examples/eval_packs/**/*.json" in workflow
     assert "skillbench pack-checklist" in workflow
+    assert "skillbench pack-compare" in workflow
+    assert "--output" in workflow
+    assert "generic-skill-smoke-to-release-comparison.md" in workflow
+    assert "generic-skill-smoke-to-release-comparison.json" in workflow
     assert "skillbench validate-cases" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "eval-pack-checklists" in workflow
