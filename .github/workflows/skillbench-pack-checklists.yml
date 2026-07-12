@@ -52,15 +52,9 @@ jobs:
           if [ -f examples/eval_packs/generic-skill-smoke.json ] && [ -f examples/eval_packs/generic-skill-release.json ]; then
             set +e
             skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
-              --fail-on-removed-dimensions context_efficiency evidence_quality maintainability safety tooling_guidance trigger_clarity trigger_precision workflow_specificity \
-              --fail-on-removed-types safety should-not-trigger should-trigger \
-              --fail-on-removed-modes judge-only \
               --output .skillbench/pack-checklists/generic-skill-smoke-to-release-comparison.md
             compare_status=$?
             skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
-              --fail-on-removed-dimensions context_efficiency evidence_quality maintainability safety tooling_guidance trigger_clarity trigger_precision workflow_specificity \
-              --fail-on-removed-types safety should-not-trigger should-trigger \
-              --fail-on-removed-modes judge-only \
               --json | tee .skillbench/pack-checklists/generic-skill-smoke-to-release-comparison.json
             compare_json_status=${PIPESTATUS[0]}
             set -e

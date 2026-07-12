@@ -50,4 +50,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.14 shipped Markdown rendering for eval pack comparisons via `skillbench pack-compare --output`.
 - v0.5.15 shipped eval pack comparison Markdown/JSON artifacts from the pack checklist GitHub Actions workflow.
 - v0.5.16 shipped `pack-compare --fail-on-removed-*` coverage drift gates and wired required dimension/type/mode gates into the pack checklist workflow.
-- Next: allow coverage drift gate policies to be loaded from a project config file or eval pack metadata instead of only CLI flags.
+- v0.5.17 shipped coverage drift gate policy loading from right-hand eval pack metadata and `--gate-policy` JSON files.
+- Next: render coverage drift gate policy sources and violations into the Markdown comparison artifact.

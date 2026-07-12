@@ -72,6 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
     pack_compare_parser.add_argument("right")
     pack_compare_parser.add_argument("--json", action="store_true")
     pack_compare_parser.add_argument("--output", help="Write Markdown comparison to this path instead of stdout.")
+    pack_compare_parser.add_argument("--gate-policy", help="Load coverage drift gate policy JSON from this path.")
     pack_compare_parser.add_argument("--fail-on-removed-tags", nargs="+", default=[], help="Fail when any listed tag is removed.")
     pack_compare_parser.add_argument("--fail-on-removed-dimensions", nargs="+", default=[], help="Fail when any listed dimension is removed.")
     pack_compare_parser.add_argument("--fail-on-removed-categories", nargs="+", default=[], help="Fail when any listed category is removed.")
@@ -294,16 +295,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "pack-compare":
         comparison = compare_eval_packs(args.left, args.right)
+        gate_policy, policy_sources = _pack_compare_gate_policy(args)
         gate = evaluate_eval_pack_comparison_gate(
             comparison,
-            fail_on_removed_tags=args.fail_on_removed_tags,
-            fail_on_removed_dimensions=args.fail_on_removed_dimensions,
-            fail_on_removed_categories=args.fail_on_removed_categories,
-            fail_on_removed_types=args.fail_on_removed_types,
-            fail_on_removed_modes=args.fail_on_removed_modes,
+            **gate_policy,
         )
-        gate_requested = _pack_compare_gate_requested(args)
+        gate_requested = bool(policy_sources)
         if gate_requested:
+            gate["policy_sources"] = policy_sources
             comparison["gate"] = gate
         if args.json:
             print(json.dumps(comparison, ensure_ascii=False))
@@ -778,16 +777,74 @@ def _format_pack_comparison(comparison: dict) -> str:
     return "\n".join(lines)
 
 
-def _pack_compare_gate_requested(args) -> bool:
-    return any(
-        [
-            args.fail_on_removed_tags,
-            args.fail_on_removed_dimensions,
-            args.fail_on_removed_categories,
-            args.fail_on_removed_types,
-            args.fail_on_removed_modes,
-        ]
-    )
+def _pack_compare_gate_policy(args) -> tuple[dict[str, list[str]], list[str]]:
+    policies: list[tuple[str, dict]] = []
+    right_metadata_policy = _metadata_coverage_drift_gate(args.right)
+    if right_metadata_policy:
+        policies.append(("right.metadata.coverage_drift_gate", right_metadata_policy))
+    if args.gate_policy:
+        policies.append((str(args.gate_policy), _file_coverage_drift_gate(args.gate_policy)))
+    cli_policy = _cli_coverage_drift_gate(args)
+    if any(cli_policy.values()):
+        policies.append(("cli", cli_policy))
+
+    merged = {
+        "fail_on_removed_tags": [],
+        "fail_on_removed_dimensions": [],
+        "fail_on_removed_categories": [],
+        "fail_on_removed_types": [],
+        "fail_on_removed_modes": [],
+    }
+    sources = []
+    for source, policy in policies:
+        normalized = _normalize_coverage_drift_gate(policy)
+        if not any(normalized.values()):
+            continue
+        sources.append(source)
+        for key, values in normalized.items():
+            merged[key] = sorted(set(merged[key]) | set(values))
+    return merged, sources
+
+
+def _metadata_coverage_drift_gate(eval_set_path: str | Path) -> dict:
+    return dict(load_eval_set_data(eval_set_path).metadata.get("coverage_drift_gate") or {})
+
+
+def _file_coverage_drift_gate(path: str | Path) -> dict:
+    data = read_json(path)
+    if "coverage_drift_gate" in data:
+        return dict(data.get("coverage_drift_gate") or {})
+    return dict(data)
+
+
+def _cli_coverage_drift_gate(args) -> dict[str, list[str]]:
+    return {
+        "fail_on_removed_tags": args.fail_on_removed_tags,
+        "fail_on_removed_dimensions": args.fail_on_removed_dimensions,
+        "fail_on_removed_categories": args.fail_on_removed_categories,
+        "fail_on_removed_types": args.fail_on_removed_types,
+        "fail_on_removed_modes": args.fail_on_removed_modes,
+    }
+
+
+def _normalize_coverage_drift_gate(policy: dict) -> dict[str, list[str]]:
+    return {
+        "fail_on_removed_tags": _string_list(policy.get("fail_on_removed_tags")),
+        "fail_on_removed_dimensions": _string_list(policy.get("fail_on_removed_dimensions")),
+        "fail_on_removed_categories": _string_list(policy.get("fail_on_removed_categories")),
+        "fail_on_removed_types": _string_list(policy.get("fail_on_removed_types")),
+        "fail_on_removed_modes": _string_list(policy.get("fail_on_removed_modes")),
+    }
+
+
+def _string_list(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
 
 
 def _format_pack_comparison_gate(gate: dict) -> str:

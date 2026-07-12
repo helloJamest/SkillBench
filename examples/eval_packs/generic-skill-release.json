@@ -8,7 +8,27 @@
   "metadata": {
     "pack": "generic-skill",
     "purpose": "Reusable release checks for third-party skill authors covering trigger quality, boundaries, workflow detail, tooling, safety, evidence, and maintenance.",
-    "copy_guidance": "Use this as a release gate template. Adapt the case inputs to your skill domain and keep the trusted metadata complete."
+    "copy_guidance": "Use this as a release gate template. Adapt the case inputs to your skill domain and keep the trusted metadata complete.",
+    "coverage_drift_gate": {
+      "fail_on_removed_dimensions": [
+        "context_efficiency",
+        "evidence_quality",
+        "maintainability",
+        "safety",
+        "tooling_guidance",
+        "trigger_clarity",
+        "trigger_precision",
+        "workflow_specificity"
+      ],
+      "fail_on_removed_types": [
+        "safety",
+        "should-not-trigger",
+        "should-trigger"
+      ],
+      "fail_on_removed_modes": [
+        "judge-only"
+      ]
+    }
   },
   "cases": [
     {

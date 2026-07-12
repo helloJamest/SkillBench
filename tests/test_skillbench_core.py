@@ -554,7 +554,9 @@ def test_pack_compare_cli_json_includes_passing_coverage_drift_gate(capsys):
 
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    assert data["gate"] == {"passed": True, "violations": []}
+    assert data["gate"]["passed"] is True
+    assert data["gate"]["violations"] == []
+    assert data["gate"]["policy_sources"] == ["right.metadata.coverage_drift_gate", "cli"]
 
 
 def test_pack_compare_cli_json_keeps_stdout_machine_readable_when_gate_fails(capsys):
@@ -573,6 +575,48 @@ def test_pack_compare_cli_json_keeps_stdout_machine_readable_when_gate_fails(cap
     data = json.loads(captured.out)
     assert exit_code == 1
     assert data["gate"]["passed"] is False
+    assert data["gate"]["violations"] == [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}]
+    assert "Coverage drift gate failed" in captured.err
+
+
+def test_pack_compare_cli_applies_right_pack_metadata_gate(capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["gate"]["passed"] is True
+    assert data["gate"]["policy_sources"] == ["right.metadata.coverage_drift_gate"]
+
+
+def test_pack_compare_cli_applies_gate_policy_file(tmp_path, capsys):
+    policy_path = tmp_path / "gate-policy.json"
+    policy_path.write_text(
+        json.dumps({"coverage_drift_gate": {"fail_on_removed_tags": ["smoke"]}}),
+        encoding="utf-8",
+    )
+
+    exit_code = skillbench_main(
+        [
+            "pack-compare",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--gate-policy",
+            str(policy_path),
+            "--json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert exit_code == 1
+    assert data["gate"]["policy_sources"] == ["right.metadata.coverage_drift_gate", str(policy_path)]
     assert data["gate"]["violations"] == [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}]
     assert "Coverage drift gate failed" in captured.err
 
@@ -2096,9 +2140,10 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "--output" in workflow
     assert "generic-skill-smoke-to-release-comparison.md" in workflow
     assert "generic-skill-smoke-to-release-comparison.json" in workflow
-    assert "--fail-on-removed-dimensions" in workflow
-    assert "--fail-on-removed-types" in workflow
-    assert "--fail-on-removed-modes" in workflow
+    assert "--fail-on-removed-dimensions" not in workflow
+    assert "--fail-on-removed-types" not in workflow
+    assert "--fail-on-removed-modes" not in workflow
+    assert "coverage_drift_gate" in (EVAL_PACKS_DIR / "generic-skill-release.json").read_text(encoding="utf-8")
     assert "skillbench validate-cases" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "eval-pack-checklists" in workflow

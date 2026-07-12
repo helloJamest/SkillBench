@@ -143,9 +143,6 @@ python -m skillbench pack-checklist `
 python -m skillbench pack-compare `
   examples\eval_packs\generic-skill-smoke.json `
   examples\eval_packs\generic-skill-release.json `
-  --fail-on-removed-dimensions safety workflow_specificity `
-  --fail-on-removed-types safety should-trigger should-not-trigger `
-  --fail-on-removed-modes judge-only `
   --json
 
 python -m skillbench pack-compare `
@@ -223,7 +220,25 @@ python -m skillbench pack-compare `
 
 Use `--output .skillbench\eval-pack-comparison.md` to publish the same comparison as a human-readable Markdown artifact.
 
-Add `--fail-on-removed-dimensions`, `--fail-on-removed-tags`, `--fail-on-removed-categories`, `--fail-on-removed-types`, or `--fail-on-removed-modes` when a comparison should act as a CI coverage drift gate. The command still emits JSON with a `gate` block, and exits non-zero when a required coverage item was removed.
+Add `metadata.coverage_drift_gate` to the right-hand eval pack, pass `--gate-policy policy.json`, or use `--fail-on-removed-dimensions`, `--fail-on-removed-tags`, `--fail-on-removed-categories`, `--fail-on-removed-types`, or `--fail-on-removed-modes` when a comparison should act as a CI coverage drift gate. Policies are merged from pack metadata, policy files, and CLI flags; the command emits JSON with a `gate` block and exits non-zero when a required coverage item was removed.
+
+```json
+{
+  "coverage_drift_gate": {
+    "fail_on_removed_dimensions": ["safety", "workflow_specificity"],
+    "fail_on_removed_types": ["safety", "should-trigger", "should-not-trigger"],
+    "fail_on_removed_modes": ["judge-only"]
+  }
+}
+```
+
+```powershell
+python -m skillbench pack-compare `
+  examples\eval_packs\generic-skill-smoke.json `
+  examples\eval_packs\generic-skill-release.json `
+  --gate-policy .skillbench\pack-gate-policy.json `
+  --json
+```
 
 List case IDs, tags, modes, and dimensions before choosing a focused run:
 
@@ -321,7 +336,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts, applies required dimension/type/mode drift gates, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
