@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -206,6 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     pack_smoke_parser.add_argument("right", help="Candidate or release eval pack JSON.")
     pack_smoke_parser.add_argument("--review-dir", default=".skillbench/pack-review-smoke", help="Directory for intermediate validation, comparison, JUnit, SARIF, and CI artifacts.")
     pack_smoke_parser.add_argument("--bundle-output", default=".skillbench/pack-review-bundle", help="Directory for the generated report bundle.")
+    pack_smoke_parser.add_argument("--clean", action="store_true", help="Remove the review and bundle output directories before writing new smoke artifacts.")
     pack_smoke_parser.add_argument("--json", action="store_true", help="Print machine-readable smoke result JSON.")
 
     bundle_parser = sub.add_parser("bundle", help="Build a publishable report bundle with dashboard, PR comment, CI artifacts, and raw artifact manifests.")
@@ -686,6 +688,11 @@ def _case_selection_kwargs(args: argparse.Namespace) -> dict:
 
 def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
     review_dir = Path(args.review_dir)
+    bundle_output = Path(args.bundle_output)
+    if args.clean:
+        _clean_output_dir(review_dir)
+        if bundle_output.resolve() != review_dir.resolve():
+            _clean_output_dir(bundle_output)
     review_dir.mkdir(parents=True, exist_ok=True)
 
     left = Path(args.left)
@@ -736,11 +743,12 @@ def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
     pack_review["artifacts"]["sarif_json"] = str(sarif_path)
     write_json(pack_review_path, pack_review)
 
-    bundle_manifest = build_report_bundle(review_dir, args.bundle_output)
+    bundle_manifest = build_report_bundle(review_dir, bundle_output)
     return {
         "passed": bool(pack_review.get("passed")),
+        "cleaned": bool(args.clean),
         "review_dir": str(review_dir),
-        "bundle_output": str(Path(args.bundle_output)),
+        "bundle_output": str(bundle_output),
         "left_validation": str(left_validation_path),
         "right_validation": str(right_validation_path),
         "comparison_json": str(comparison_json_path),
@@ -751,6 +759,17 @@ def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
         "bundle_manifest": bundle_manifest["artifacts"]["manifest_json"],
         "dashboard": bundle_manifest["artifacts"]["dashboard_dir"],
     }
+
+
+def _clean_output_dir(path: Path) -> None:
+    target = path.resolve()
+    if not target.exists():
+        return
+    if not target.is_dir():
+        raise ValueError(f"Cannot clean non-directory path: {path}")
+    if target.parent == target:
+        raise ValueError(f"Refusing to clean filesystem root: {path}")
+    shutil.rmtree(target)
 
 
 def _apply_agent_args(config: SkillBenchConfig, args: argparse.Namespace) -> None:

@@ -59,4 +59,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.23 shipped eval pack review report bundles and uploaded bundle artifacts from the pack checklist workflow.
 - v0.5.24 shipped release-quality docs for consuming eval pack review bundles from CI.
 - v0.5.25 shipped `skillbench pack-review-smoke` as a compact local command for producing eval pack review evidence bundles.
-- Next: add optional pack review bundle cleanup/retention controls for repeated local runs.
+- v0.5.26 shipped `pack-review-smoke --clean` for repeated local runs without stale artifacts.
+- Next: add richer pack review smoke summaries with top gate failures and artifact hints.

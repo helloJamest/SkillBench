@@ -18,7 +18,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `pack-checklist`: render a Markdown authoring checklist for reviewing an eval pack before CI.
    - `pack-compare`: compare eval pack versions for case and coverage changes, with optional removed-coverage CI gates.
    - `pack-review-artifacts`: build pack review CI result JSON, JUnit, and SARIF from eval pack review artifacts.
-   - `pack-review-smoke`: run local pack review smoke from two eval packs and build the same evidence bundle used in CI.
+   - `pack-review-smoke`: run local pack review smoke from two eval packs and build the same evidence bundle used in CI; add `--clean` for repeated local runs.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.

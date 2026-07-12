@@ -68,10 +68,11 @@ To reproduce the CI evidence locally:
 ```bash
 skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
   --review-dir .skillbench/pack-review-smoke \
-  --bundle-output .skillbench/pack-review-bundle
+  --bundle-output .skillbench/pack-review-bundle \
+  --clean
 ```
 
-The command above is equivalent to the expanded workflow below:
+Use `--clean` for repeated local runs so stale validation, comparison, JUnit, SARIF, or dashboard files do not survive from earlier smoke checks. The command above is equivalent to the expanded workflow below:
 
 ```bash
 mkdir -p .skillbench/pack-checklists

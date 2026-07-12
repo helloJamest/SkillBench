@@ -2247,6 +2247,37 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     assert (bundle_dir / "skillbench-comment.md").exists()
 
 
+def test_pack_review_smoke_cli_clean_removes_stale_outputs(tmp_path, capsys):
+    review_dir = tmp_path / "pack-review-smoke"
+    bundle_dir = tmp_path / "pack-review-bundle"
+    review_dir.mkdir()
+    bundle_dir.mkdir()
+    (review_dir / "stale.validation.json").write_text("{}", encoding="utf-8")
+    (bundle_dir / "stale.txt").write_text("old", encoding="utf-8")
+
+    exit_code = skillbench_main(
+        [
+            "pack-review-smoke",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--review-dir",
+            str(review_dir),
+            "--bundle-output",
+            str(bundle_dir),
+            "--clean",
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["cleaned"] is True
+    assert not (review_dir / "stale.validation.json").exists()
+    assert not (bundle_dir / "stale.txt").exists()
+    assert (review_dir / "pack_review_ci_result.json").exists()
+    assert (bundle_dir / "bundle_manifest.json").exists()
+
+
 def test_report_bundle_reads_utf8_bom_external_ci_result_json(tmp_path, capsys):
     exit_code = skillbench_main(
         [
