@@ -28,6 +28,7 @@ skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_s
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness-cost custom-command=0.02 --min-total-lift 0.1 --require-all-pass
 skillbench pr-comment .skillbench/runs/latest --output .skillbench/skillbench-comment.md
+skillbench bundle .skillbench/runs/latest --output .skillbench/report-bundle
 skillbench benchmark --json
 ```
 
@@ -219,6 +220,17 @@ python -m skillbench pr-comment `
 
 The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, renders `skillbench pr-comment`, and posts or updates a sticky SkillBench summary comment on the PR.
 
+Build one uploadable report bundle for CI artifacts or release evidence:
+
+```powershell
+python -m skillbench bundle `
+  .skillbench\runs\latest `
+  --output .skillbench\report-bundle `
+  --json
+```
+
+The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` copied run artifacts, `raw_artifacts.json`, `bundle_manifest.json`, and JUnit/SARIF files when the source run has `ci_result.json` or `matrix_ci_result.json`.
+
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
 ```powershell
@@ -325,6 +337,7 @@ Every eval run writes:
 - `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `skillbench-comment.md` when `skillbench pr-comment --output <path>` is requested
+- `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
@@ -357,6 +370,14 @@ python -m skillbench export-dashboard `
 
 Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
 Static exports include `artifacts/index.html`, raw artifact detail pages, harness matrix pages for `matrix_report.json`, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
+
+Package the dashboard together with PR comment text, CI outputs, and copied raw artifacts:
+
+```powershell
+python -m skillbench bundle `
+  .skillbench\runs\latest `
+  --output .skillbench\report-bundle
+```
 
 ## Optional Integrations
 

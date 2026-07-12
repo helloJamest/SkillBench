@@ -22,7 +22,7 @@ from skillbench.lift import run_lift
 from skillbench.matrix import run_harness_matrix
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
-from skillbench.reports import build_ci_result, build_comparison, build_harness_matrix_report, build_junit_xml, build_sarif_report, render_pr_comment, write_comparison, write_sarif_report
+from skillbench.reports import build_ci_result, build_comparison, build_harness_matrix_report, build_junit_xml, build_report_bundle, build_sarif_report, render_pr_comment, write_comparison, write_sarif_report
 from skillbench.schemas import EvalCase, EvalSet
 
 
@@ -1521,6 +1521,73 @@ def test_pr_comment_cli_reads_external_ci_result_json(tmp_path, capsys):
     assert "Status: **FAIL**" in markdown
     assert "### Gate Failures" in markdown
     assert "report.json" in markdown
+
+
+def test_report_bundle_writes_dashboard_comment_ci_artifacts_and_raw_manifest(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "ci",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "ci-runs"),
+            "--min-score",
+            "9.9",
+            "--json",
+        ]
+    )
+    ci_result = json.loads(capsys.readouterr().out)
+    run_dir = Path(ci_result["report_path"]).parent
+
+    manifest = build_report_bundle(run_dir, tmp_path / "bundle")
+
+    assert exit_code == 1
+    assert manifest["schema_version"] == "skillbench.report-bundle.v1"
+    assert manifest["source"]["kind"] == "ci"
+    assert (tmp_path / "bundle" / "dashboard" / "index.html").exists()
+    assert (tmp_path / "bundle" / "skillbench-comment.md").exists()
+    assert (tmp_path / "bundle" / "junit.xml").exists()
+    assert (tmp_path / "bundle" / "skillbench.sarif").exists()
+    raw_manifest = json.loads((tmp_path / "bundle" / "raw_artifacts.json").read_text(encoding="utf-8"))
+    assert any(item["path"] == "report.json" for item in raw_manifest["artifacts"])
+    assert any(item["path"] == "ci_result.json" for item in raw_manifest["artifacts"])
+    assert "SkillBench CI" in (tmp_path / "bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
+
+
+def test_report_bundle_cli_outputs_matrix_bundle_manifest(tmp_path, capsys):
+    matrix_exit_code = skillbench_main(
+        [
+            "harness-matrix",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "matrix-runs"),
+            "--harness",
+            "custom-command",
+            "--min-total-lift",
+            "99",
+            "--require-all-pass",
+            "--json",
+        ]
+    )
+    matrix_result = json.loads(capsys.readouterr().out)
+    run_dir = Path(matrix_result["artifacts"]["matrix_report_json"]).parent
+    output_dir = tmp_path / "matrix-bundle"
+
+    bundle_exit_code = skillbench_main(["bundle", str(run_dir), "--output", str(output_dir), "--json"])
+
+    manifest = json.loads(capsys.readouterr().out)
+    assert matrix_exit_code == 1
+    assert bundle_exit_code == 0
+    assert manifest["source"]["kind"] == "matrix"
+    assert Path(manifest["artifacts"]["manifest_json"]).exists()
+    assert (output_dir / "dashboard" / "index.html").exists()
+    assert (output_dir / "skillbench-comment.md").exists()
+    assert (output_dir / "junit.xml").exists()
+    assert (output_dir / "skillbench.sarif").exists()
+    assert "SkillBench Harness Matrix" in (output_dir / "skillbench-comment.md").read_text(encoding="utf-8")
 
 
 def test_dashboard_renders_harness_matrix_report(tmp_path):

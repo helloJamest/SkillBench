@@ -17,6 +17,7 @@ from .reports import (
     build_ci_result,
     build_comparison,
     build_harness_matrix_ci_result,
+    build_report_bundle,
     write_ci_result,
     write_comparison,
     write_harness_matrix_report,
@@ -161,6 +162,11 @@ def build_parser() -> argparse.ArgumentParser:
     pr_comment_parser = sub.add_parser("pr-comment", help="Render a GitHub PR comment markdown summary for a run or report artifact.")
     pr_comment_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
     pr_comment_parser.add_argument("--output", help="Write the markdown comment to this path.")
+
+    bundle_parser = sub.add_parser("bundle", help="Build a publishable report bundle with dashboard, PR comment, CI artifacts, and raw artifact manifests.")
+    bundle_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
+    bundle_parser.add_argument("--output", required=True, help="Directory to write the bundle.")
+    bundle_parser.add_argument("--json", action="store_true", help="Print the bundle manifest JSON.")
 
     compare_parser = sub.add_parser("compare", help="Compare two report.json files or run dirs.")
     compare_parser.add_argument("left")
@@ -448,6 +454,21 @@ def main(argv: list[str] | None = None) -> int:
             print(f"PR comment: {output}")
         else:
             print(markdown)
+        return 0
+
+    if args.command == "bundle":
+        manifest = build_report_bundle(args.source, args.output)
+        if args.json:
+            print(json.dumps(manifest, ensure_ascii=False))
+        else:
+            print(f"Bundle: {manifest['artifacts']['manifest_json']}")
+            print(f"Dashboard: {manifest['artifacts']['dashboard_dir']}")
+            if manifest["artifacts"].get("pr_comment_md"):
+                print(f"PR comment: {manifest['artifacts']['pr_comment_md']}")
+            if manifest["artifacts"].get("junit_xml"):
+                print(f"JUnit: {manifest['artifacts']['junit_xml']}")
+            if manifest["artifacts"].get("sarif_json"):
+                print(f"SARIF: {manifest['artifacts']['sarif_json']}")
         return 0
 
     if args.command == "compare":

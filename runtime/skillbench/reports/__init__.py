@@ -1,3 +1,4 @@
+from .bundle import build_report_bundle
 from .ci import build_ci_result, write_ci_result
 from .compare import build_comparison, write_comparison
 from .junit import build_junit_xml, write_junit_xml
@@ -12,6 +13,7 @@ __all__ = [
     "build_ci_result",
     "build_comparison",
     "build_evolution_timeline",
+    "build_report_bundle",
     "build_junit_xml",
     "build_lift_report",
     "build_harness_matrix_report",
