@@ -39,6 +39,7 @@ PACK_REVIEW_SMOKE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-r
 PACK_REVIEW_BUNDLE_GUIDE = ROOT / "docs" / "eval-pack-review-bundles.md"
 PACK_REVIEW_SMOKE_SCHEMA = ROOT / "docs" / "schemas" / "pack-review-smoke-result.schema.json"
 PACK_REVIEW_CONTRACT_CHANGELOG = ROOT / "docs" / "schemas" / "pack-review-contracts.changelog.json"
+PACK_REVIEW_CONTRACT_RELEASE_NOTE_TEMPLATE = ROOT / "docs" / "templates" / "pack-review-contract-release-note.md"
 
 
 def test_eval_writes_report(tmp_path):
@@ -2240,7 +2241,7 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert data["contract"]["id"] == "skillbench.pack-review-smoke-result"
-    assert data["contract"]["version"] == "0.5.34"
+    assert data["contract"]["version"] == "0.5.35"
     assert data["contract"]["schema"] == "docs/schemas/pack-review-smoke-result.schema.json"
     assert data["contract"]["changelog"] == "docs/schemas/pack-review-contracts.changelog.json"
     assert data["passed"] is True
@@ -2516,6 +2517,8 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "docs/schemas/pack-review-smoke-result.schema.json" in guide
     assert "docs/schemas/pack-review-contracts.changelog.json" in readme
     assert "docs/schemas/pack-review-contracts.changelog.json" in guide
+    assert "docs/templates/pack-review-contract-release-note.md" in readme
+    assert "docs/templates/pack-review-contract-release-note.md" in guide
     assert ".github/workflows/skillbench-pack-review-smoke.yml" in guide
     assert "pack-review-smoke" in readme
     assert "pack-review-smoke" in guide
@@ -2572,8 +2575,22 @@ def test_pack_review_contract_changelog_is_machine_readable():
 
     assert changelog["schema_version"] == "skillbench.pack-review-contract-changelog.v1"
     assert changelog["contract_id"] == "skillbench.pack-review-smoke-result"
-    assert changelog["latest_version"] == "0.5.34"
+    assert changelog["latest_version"] == "0.5.35"
     assert changelog["entries"][0]["version"] == changelog["latest_version"]
     assert changelog["entries"][0]["compatibility"] in {"additive", "breaking", "documentation"}
     assert "docs/schemas/pack-review-smoke-result.schema.json" in changelog["entries"][0]["schema"]
     assert any("summary" in field for field in changelog["stable_fields"])
+
+
+def test_pack_review_contract_release_note_template_is_actionable():
+    template = PACK_REVIEW_CONTRACT_RELEASE_NOTE_TEMPLATE.read_text(encoding="utf-8")
+
+    assert "Pack Review Contract Release Note" in template
+    assert "Contract ID: `skillbench.pack-review-smoke-result`" in template
+    assert "Compatibility: `additive | breaking | documentation`" in template
+    assert "Stable Fields Changed" in template
+    assert "Consumer Impact" in template
+    assert "Migration Notes" in template
+    assert "Verification" in template
+    assert "pack-review-smoke --json" in template
+    assert "docs/schemas/pack-review-contracts.changelog.json" in template
