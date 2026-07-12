@@ -21,6 +21,7 @@ from .reports import (
     write_comparison,
     write_harness_matrix_report,
     write_junit_xml,
+    write_pr_comment,
     write_sarif_report,
 )
 from .runners import AGENT_RUNNERS
@@ -156,6 +157,10 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = sub.add_parser("report", help="Print a compact report summary.")
     report_parser.add_argument("run_dir")
     report_parser.add_argument("--json", action="store_true", help="Print the persisted report JSON.")
+
+    pr_comment_parser = sub.add_parser("pr-comment", help="Render a GitHub PR comment markdown summary for a run or report artifact.")
+    pr_comment_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
+    pr_comment_parser.add_argument("--output", help="Write the markdown comment to this path.")
 
     compare_parser = sub.add_parser("compare", help="Compare two report.json files or run dirs.")
     compare_parser.add_argument("left")
@@ -432,6 +437,17 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, ensure_ascii=False))
         else:
             print(_format_report(report))
+        return 0
+
+    if args.command == "pr-comment":
+        from .reports import render_pr_comment
+
+        markdown = render_pr_comment(args.source)
+        if args.output:
+            output = write_pr_comment(args.source, args.output)
+            print(f"PR comment: {output}")
+        else:
+            print(markdown)
         return 0
 
     if args.command == "compare":

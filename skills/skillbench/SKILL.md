@@ -24,6 +24,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `benchmark`: run the bundled good/vague/unsafe/incomplete fixtures and rank them.
    - `dashboard`: serve case-level traceability for a run.
    - `export-dashboard`: write static HTML pages for a run.
+   - `pr-comment`: render reusable GitHub PR Markdown for `report.json`, `ci_result.json`, `lift_report.json`, or `matrix_report.json`.
 3. Prefer an explicit eval set when the user provides one. Otherwise use SkillBench's default case generator.
 4. Use `judge-only` for fast regression. Use `full-agent` only when the user needs behavior evidence from a real agent run and a safe agent command is configured. Use `--agent-runner custom-command|codex-cli|claude-cli` for audit metadata, `--agent-command` or runner environment variables for execution, and `--agent-timeout` or `SKILLBENCH_AGENT_TIMEOUT_SEC` to bound full-agent commands.
 5. Preserve all generated artifacts under `.skillbench/runs/` unless the user asks for another output directory.
@@ -52,6 +53,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench evo <path-to-SKILL.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench calibrate <path-to-SKILL.md> --samples 3 --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench benchmark --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench ci <path-to-SKILL.md> --include-tag safety --json
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench pr-comment .skillbench/runs/latest --output .skillbench/skillbench-comment.md
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench dashboard .skillbench/runs/latest
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench export-dashboard .skillbench/runs/latest --output .skillbench/site
 ```
@@ -80,8 +82,9 @@ Every eval/evo run should produce:
 - optional `reflection.json` and mutation records
 - `comet_offline.jsonl` when Comet ML is unavailable
 - `ci_result.json` when using CI gates
+- `skillbench-comment.md` when using `pr-comment --output <path>` for GitHub PR summaries
 - SARIF output when `ci --sarif <path>` is requested
-- `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow for CI summaries
+- `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

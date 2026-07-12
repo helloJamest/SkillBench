@@ -22,7 +22,7 @@ from skillbench.lift import run_lift
 from skillbench.matrix import run_harness_matrix
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
-from skillbench.reports import build_ci_result, build_comparison, build_harness_matrix_report, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
+from skillbench.reports import build_ci_result, build_comparison, build_harness_matrix_report, build_junit_xml, build_sarif_report, render_pr_comment, write_comparison, write_sarif_report
 from skillbench.schemas import EvalCase, EvalSet
 
 
@@ -1450,6 +1450,79 @@ def test_harness_matrix_cli_writes_junit_and_sarif_for_failed_gate(tmp_path, cap
     assert data["artifacts"]["sarif_json"] == str(sarif_path)
 
 
+def test_pr_comment_renders_harness_matrix_gate_and_efficiency(tmp_path):
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=EVAL_SET,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command"],
+        harness_costs={"custom-command": 0.25},
+        min_total_lift=99.0,
+        min_mean_case_lift=99.0,
+        require_all_pass=True,
+    )
+    run_dir = Path(result["artifacts"]["matrix_report_json"]).parent
+
+    markdown = render_pr_comment(run_dir)
+
+    assert "<!-- skillbench-pr-comment -->" in markdown
+    assert "## SkillBench Harness Matrix" in markdown
+    assert "Gate: **FAIL**" in markdown
+    assert "Best harness: `custom-command`" in markdown
+    assert "| Runner | Total Lift | Mean Case Lift | Verdict |" in markdown
+    assert "| custom-command |" in markdown
+    assert "### Efficiency" in markdown
+    assert "Lift / USD" in markdown
+    assert "### Gate Failures" in markdown
+    assert "matrix_report.json" in markdown
+
+
+def test_pr_comment_cli_writes_markdown_file(tmp_path, capsys):
+    result = run_lift(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "lift")
+    run_dir = Path(result["artifacts"]["lift_report_json"]).parent
+    output = tmp_path / "skillbench-comment.md"
+
+    exit_code = skillbench_main(["pr-comment", str(run_dir), "--output", str(output)])
+
+    stdout = capsys.readouterr().out
+    markdown = output.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "skillbench-comment.md" in stdout
+    assert "<!-- skillbench-pr-comment -->" in markdown
+    assert "## SkillBench Lift" in markdown
+    assert "Total Lift" in markdown
+    assert "lift_report.json" in markdown
+
+
+def test_pr_comment_cli_reads_external_ci_result_json(tmp_path, capsys):
+    ci_exit_code = skillbench_main(
+        [
+            "ci",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "ci-runs"),
+            "--min-score",
+            "9.9",
+            "--json",
+        ]
+    )
+    ci_result_path = tmp_path / "external-ci-result.json"
+    ci_result_path.write_text(capsys.readouterr().out, encoding="utf-8")
+    output = tmp_path / "skillbench-comment.md"
+
+    comment_exit_code = skillbench_main(["pr-comment", str(ci_result_path), "--output", str(output)])
+
+    markdown = output.read_text(encoding="utf-8")
+    assert ci_exit_code == 1
+    assert comment_exit_code == 0
+    assert "## SkillBench CI" in markdown
+    assert "Status: **FAIL**" in markdown
+    assert "### Gate Failures" in markdown
+    assert "report.json" in markdown
+
+
 def test_dashboard_renders_harness_matrix_report(tmp_path):
     result = run_harness_matrix(
         SAMPLE_SKILL,
@@ -1494,4 +1567,6 @@ def test_pr_comment_workflow_runs_skillbench_ci_and_posts_sticky_comment():
     assert "ci_result.json" in workflow
     assert "actions/github-script" in workflow
     assert "<!-- skillbench-pr-comment -->" in workflow
+    assert "skillbench pr-comment" in workflow
+    assert "skillbench-comment.md" in workflow
     assert "github.rest.issues.updateComment" in workflow

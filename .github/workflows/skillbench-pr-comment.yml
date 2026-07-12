@@ -41,6 +41,12 @@ jobs:
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           exit 0
 
+      - name: Build SkillBench PR comment
+        shell: bash
+        run: |
+          skillbench pr-comment .skillbench/pr-comment/ci_result.json \
+            --output .skillbench/pr-comment/skillbench-comment.md
+
       - name: Comment SkillBench summary
         uses: actions/github-script@v7
         env:
@@ -49,25 +55,7 @@ jobs:
           script: |
             const fs = require("fs");
             const marker = "<!-- skillbench-pr-comment -->";
-            const ci = JSON.parse(fs.readFileSync(".skillbench/pr-comment/ci_result.json", "utf8"));
-            const status = process.env.SKILLBENCH_STATUS === "0" && ci.passed ? "passed" : "failed";
-            const failures = (ci.failures || []).map((failure) => `- ${failure.message}`).join("\n") || "- None";
-            const body = [
-              marker,
-              "## SkillBench",
-              "",
-              `Status: **${status}**`,
-              "",
-              "| Metric | Value |",
-              "| --- | --- |",
-              `| Total score | ${ci.total_score} |`,
-              `| Safety score | ${ci.safety_score} |`,
-              `| Worst case | \`${ci.worst_case_id || "-"}\` |`,
-              `| Report | \`${ci.report_path}\` |`,
-              "",
-              "Failures:",
-              failures,
-            ].join("\n");
+            const body = fs.readFileSync(".skillbench/pr-comment/skillbench-comment.md", "utf8");
 
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
@@ -78,3 +66,7 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+
+      - name: Fail when SkillBench CI failed
+        if: steps.skillbench.outputs.status != '0'
+        run: exit 1

@@ -27,6 +27,7 @@ skillbench report .skillbench/runs/latest
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness-cost custom-command=0.02 --min-total-lift 0.1 --require-all-pass
+skillbench pr-comment .skillbench/runs/latest --output .skillbench/skillbench-comment.md
 skillbench benchmark --json
 ```
 
@@ -208,7 +209,15 @@ python -m skillbench ci `
 
 CI writes `ci_result.json` in the run directory and exits non-zero on threshold or regression failures. Text-mode CI also writes `junit.xml` in the run directory by default; use `--junit` and `--sarif` to choose explicit artifact paths for CI uploads.
 
-The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, reads `ci_result.json`, and posts or updates a sticky SkillBench summary comment on the PR.
+Render a reusable Markdown PR summary from any eval run, `ci_result.json`, `lift_report.json`, or `matrix_report.json`:
+
+```powershell
+python -m skillbench pr-comment `
+  .skillbench\runs\latest `
+  --output .skillbench\reports\skillbench-comment.md
+```
+
+The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, renders `skillbench pr-comment`, and posts or updates a sticky SkillBench summary comment on the PR.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -315,6 +324,7 @@ Every eval run writes:
 - `lift_report.json` for `skillbench lift` A/B runs
 - `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
+- `skillbench-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`
