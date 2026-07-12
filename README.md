@@ -340,6 +340,7 @@ python -m skillbench pack-review-smoke `
 ```
 
 This writes validation JSON, comparison JSON/Markdown, `pack_review_ci_result.json`, JUnit, SARIF, and a bundled dashboard for local inspection. The command prints a compact summary with validation/comparison counts, gate failures, and artifact hints; `--json` follows `docs/schemas/pack-review-smoke-result.schema.json`. Add `--clean` when repeated local runs should remove stale review and bundle artifacts before rebuilding.
+For a schema-validation CI example, see `.github/workflows/skillbench-pack-review-smoke.yml`.
 
 Build one uploadable report bundle for CI artifacts or release evidence:
 

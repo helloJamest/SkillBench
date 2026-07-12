@@ -35,6 +35,7 @@ GENERIC_SKILL_SMOKE_PACK = EVAL_PACKS_DIR / "generic-skill-smoke.json"
 PR_COMMENT_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pr-comment.yml"
 BUNDLE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-bundles.yml"
 PACK_CHECKLIST_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-checklists.yml"
+PACK_REVIEW_SMOKE_WORKFLOW = ROOT / ".github" / "workflows" / "skillbench-pack-review-smoke.yml"
 PACK_REVIEW_BUNDLE_GUIDE = ROOT / "docs" / "eval-pack-review-bundles.md"
 PACK_REVIEW_SMOKE_SCHEMA = ROOT / "docs" / "schemas" / "pack-review-smoke-result.schema.json"
 
@@ -2508,6 +2509,7 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "docs/eval-pack-review-bundles.md" in readme
     assert "docs/schemas/pack-review-smoke-result.schema.json" in readme
     assert "docs/schemas/pack-review-smoke-result.schema.json" in guide
+    assert ".github/workflows/skillbench-pack-review-smoke.yml" in guide
     assert "pack-review-smoke" in readme
     assert "pack-review-smoke" in guide
     assert "eval-pack-review-bundle" in guide
@@ -2517,6 +2519,19 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     assert "pack_review_ci_result.json" in guide
     assert "actions/download-artifact" in guide
     assert "coverage drift" in guide.lower()
+
+
+def test_pack_review_smoke_workflow_validates_json_schema_and_uploads_bundle():
+    workflow = PACK_REVIEW_SMOKE_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "skillbench pack-review-smoke" in workflow
+    assert "pack-review-smoke-result.schema.json" in workflow
+    assert "python -m pip install jsonschema" in workflow
+    assert "jsonschema.validate" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "eval-pack-review-smoke-bundle" in workflow
+    assert "Fail when pack review smoke failed" in workflow
 
 
 def test_pack_review_smoke_result_schema_documents_json_output():

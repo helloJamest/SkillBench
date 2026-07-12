@@ -74,6 +74,8 @@ skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json exampl
 
 The smoke command prints a compact summary with validation and comparison counts, top gate failures, and artifact hints for the dashboard, raw manifest, and pack review CI result. Its `--json` output is documented by `docs/schemas/pack-review-smoke-result.schema.json`. Use `--clean` for repeated local runs so stale validation, comparison, JUnit, SARIF, or dashboard files do not survive from earlier smoke checks. The command above is equivalent to the expanded workflow below:
 
+For a copyable GitHub Actions example that validates the smoke JSON against that schema and uploads the generated bundle, see `.github/workflows/skillbench-pack-review-smoke.yml`.
+
 ```bash
 mkdir -p .skillbench/pack-checklists
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json \

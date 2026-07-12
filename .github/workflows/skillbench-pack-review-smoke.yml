@@ -1,0 +1,78 @@
+name: SkillBench Pack Review Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "examples/eval_packs/**/*.json"
+      - "docs/schemas/pack-review-smoke-result.schema.json"
+      - "runtime/skillbench/**"
+      - ".github/workflows/skillbench-pack-review-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pack-review-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and schema validator
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install jsonschema
+
+      - name: Run pack review smoke
+        id: pack_review_smoke
+        shell: bash
+        run: |
+          mkdir -p .skillbench
+          set +e
+          skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
+            --review-dir .skillbench/pack-review-smoke \
+            --bundle-output .skillbench/pack-review-bundle \
+            --clean \
+            --json | tee .skillbench/pack-review-smoke-result.json
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Validate pack review smoke JSON schema
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import jsonschema
+
+          payload = json.loads(Path(".skillbench/pack-review-smoke-result.json").read_text(encoding="utf-8"))
+          schema = json.loads(Path("docs/schemas/pack-review-smoke-result.schema.json").read_text(encoding="utf-8"))
+          jsonschema.validate(instance=payload, schema=schema)
+          PY
+
+      - name: Upload pack review smoke bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-pack-review-smoke-bundle
+          path: .skillbench/pack-review-bundle
+
+      - name: Upload pack review smoke result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-pack-review-smoke-result
+          path: .skillbench/pack-review-smoke-result.json
+
+      - name: Fail when pack review smoke failed
+        if: steps.pack_review_smoke.outputs.status != '0'
+        run: exit 1
