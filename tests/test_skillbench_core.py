@@ -1240,11 +1240,35 @@ def test_harness_matrix_writes_ranked_report(tmp_path):
     data = json.loads(report_path.read_text(encoding="utf-8"))
     assert data["run_id"] == result["run_id"]
     assert data["schema_version"] == "skillbench.harness-matrix.v1"
+    assert data["gate"]["passed"] is True
     assert [item["runner_name"] for item in data["harnesses"]] == ["custom-command", "codex-cli"]
     assert len(data["ranking"]) == 2
     assert data["best_harness"] in {"custom-command", "codex-cli"}
     assert all(Path(item["lift_report_json"]).exists() for item in data["harnesses"])
     assert all("total_lift" in item and "verdict" in item for item in data["harnesses"])
+
+
+def test_harness_matrix_gate_fails_when_lift_threshold_is_not_met(tmp_path):
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=EVAL_SET,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command", "codex-cli"],
+        min_total_lift=99.0,
+        min_mean_case_lift=99.0,
+        require_all_pass=True,
+    )
+
+    report_path = Path(result["artifacts"]["matrix_report_json"])
+    data = json.loads(report_path.read_text(encoding="utf-8"))
+    assert data["gate"]["passed"] is False
+    assert data["gate"]["thresholds"] == {
+        "min_total_lift": 99.0,
+        "min_mean_case_lift": 99.0,
+        "require_all_pass": True,
+    }
+    assert data["gate"]["failures"]
+    assert all(failure["runner_name"] in {"custom-command", "codex-cli"} for failure in data["gate"]["failures"])
 
 
 def test_harness_matrix_cli_json_outputs_machine_readable_summary(tmp_path, capsys):
@@ -1270,6 +1294,30 @@ def test_harness_matrix_cli_json_outputs_machine_readable_summary(tmp_path, caps
     assert Path(data["artifacts"]["matrix_report_json"]).exists()
 
 
+def test_harness_matrix_cli_returns_nonzero_for_failed_gate(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "harness-matrix",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "matrix"),
+            "--harness",
+            "custom-command",
+            "--min-total-lift",
+            "99",
+            "--require-all-pass",
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert data["gate"]["passed"] is False
+    assert data["gate"]["failures"][0]["type"] == "total_lift"
+
+
 def test_dashboard_renders_harness_matrix_report(tmp_path):
     result = run_harness_matrix(
         SAMPLE_SKILL,
@@ -1282,6 +1330,7 @@ def test_dashboard_renders_harness_matrix_report(tmp_path):
     html = render_dashboard_html(run_dir)
 
     assert "SkillBench Harness Matrix" in html
+    assert "Matrix Gate" in html
     assert "Harness Ranking" in html
     assert "custom-command" in html
     assert "codex-cli" in html

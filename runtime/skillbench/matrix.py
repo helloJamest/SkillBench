@@ -20,6 +20,9 @@ def run_harness_matrix(
     mode_override: str | None = None,
     min_lift: float = 0.1,
     bootstrap_samples: int = 500,
+    min_total_lift: float | None = None,
+    min_mean_case_lift: float | None = None,
+    require_all_pass: bool = False,
     case_ids: list[str] | None = None,
     include_tags: list[str] | None = None,
     exclude_tags: list[str] | None = None,
@@ -62,6 +65,9 @@ def run_harness_matrix(
         skill_path=str(skill_file),
         eval_set_id=eval_set_id,
         harness_results=results,
+        min_total_lift=min_total_lift,
+        min_mean_case_lift=min_mean_case_lift,
+        require_all_pass=require_all_pass,
     )
     report_path = write_harness_matrix_report(matrix, run_dir / "matrix_report.json")
     matrix["artifacts"] = {"matrix_report_json": str(report_path)}

@@ -26,6 +26,7 @@ skillbench eval examples/skills/sample-skill/SKILL.md --eval-set examples/eval_s
 skillbench report .skillbench/runs/latest
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
+skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --min-total-lift 0.1 --require-all-pass
 skillbench benchmark --json
 ```
 
@@ -69,7 +70,7 @@ python -m skillbench eval `
 
 ## Case Selection
 
-`eval`, `ci`, `lift`, and `evo` can run a focused subset of an eval set:
+`eval`, `ci`, `lift`, `harness-matrix`, and `evo` can run a focused subset of an eval set:
 
 ```powershell
 python -m skillbench eval `
@@ -142,7 +143,7 @@ python -m skillbench list-cases `
   --json
 ```
 
-`list-cases` accepts the same selection filters as `eval`, `ci`, `lift`, and `evo`, so you can preview a focused subset:
+`list-cases` accepts the same selection filters as `eval`, `ci`, `lift`, `harness-matrix`, and `evo`, so you can preview a focused subset:
 
 ```powershell
 python -m skillbench list-cases `
@@ -209,6 +210,22 @@ CI writes `ci_result.json` in the run directory and exits non-zero on threshold 
 
 The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, reads `ci_result.json`, and posts or updates a sticky SkillBench summary comment on the PR.
 
+Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
+
+```powershell
+python -m skillbench harness-matrix `
+  examples\skills\sample-skill\SKILL.md `
+  --eval-set examples\eval_sets\basic-skill-eval.json `
+  --harness custom-command `
+  --harness codex-cli `
+  --min-total-lift 0.1 `
+  --min-mean-case-lift 0.05 `
+  --require-all-pass `
+  --json
+```
+
+The command writes `gate` into `matrix_report.json` with `passed`, `thresholds`, `passing_harnesses`, and `failures`, and exits non-zero when the gate fails.
+
 ## Skill Lift A/B Evaluation
 
 Use `lift` to measure whether a skill document improves the judged outcome compared with a no-skill baseline:
@@ -235,7 +252,7 @@ python -m skillbench harness-matrix `
   --json
 ```
 
-The matrix command runs one `lift` evaluation per harness, writes each nested `lift_report.json`, then writes a top-level `matrix_report.json` with harness scores, ranking, best harness, and links to the underlying lift artifacts. It accepts the same case selection filters as `eval`, `ci`, `lift`, and `evo`.
+The matrix command runs one `lift` evaluation per harness, writes each nested `lift_report.json`, then writes a top-level `matrix_report.json` with harness scores, ranking, best harness, gate result, and links to the underlying lift artifacts. It accepts the same case selection filters as `eval`, `ci`, `lift`, and `evo`.
 
 ## Judge Calibration
 
@@ -296,7 +313,7 @@ When a custom judge fails, the same page shows a dedicated `Judge Error` section
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
 The report page also includes case filters. You can combine query parameters such as `?failed=1&dimension=safety&type=safety&q=approval` to focus the case table while preserving the run summary.
 Lift dashboards render `lift_report.json` with with-skill / without-skill totals, dimension lift, case lift, and verdict evidence.
-Harness matrix dashboards render `matrix_report.json` with harness ranking, best harness, lift verdicts, and links to each nested lift report.
+Harness matrix dashboards render `matrix_report.json` with harness ranking, best harness, gate status, lift verdicts, and links to each nested lift report.
 Evolution dashboards expose `/timeline` to trace each select, reflect, mutate, and accept round with selected/mutated candidates, scores, deltas, reflection summaries, mutation summaries, and decision reasons.
 
 Print a compact report for humans, or the persisted JSON for scripts:

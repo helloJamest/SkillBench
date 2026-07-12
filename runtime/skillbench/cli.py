@@ -89,6 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
     matrix_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
     matrix_parser.add_argument("--min-lift", type=float, default=0.1)
     matrix_parser.add_argument("--bootstrap-samples", type=int, default=500)
+    matrix_parser.add_argument("--min-total-lift", type=float, default=None, help="Fail the matrix gate unless at least one selected harness reaches this total lift.")
+    matrix_parser.add_argument("--min-mean-case-lift", type=float, default=None, help="Fail the matrix gate unless at least one selected harness reaches this mean case lift.")
+    matrix_parser.add_argument("--require-all-pass", action="store_true", help="Require every selected harness to satisfy matrix gate thresholds.")
     matrix_parser.add_argument("--judge-backend", choices=["auto", "local-heuristic", "custom-command"], default=None)
     matrix_parser.add_argument("--judge-command", default=None)
     matrix_parser.add_argument("--agent-command", default=None)
@@ -284,13 +287,16 @@ def main(argv: list[str] | None = None) -> int:
             mode_override=args.mode,
             min_lift=args.min_lift,
             bootstrap_samples=args.bootstrap_samples,
+            min_total_lift=args.min_total_lift,
+            min_mean_case_lift=args.min_mean_case_lift,
+            require_all_pass=args.require_all_pass,
             **_case_selection_kwargs(args),
         )
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
         else:
             print(_format_harness_matrix(result))
-        return 0
+        return 0 if result.get("gate", {}).get("passed", True) else 1
 
     if args.command == "ci":
         config = SkillBenchConfig.from_env(args.output_dir)
@@ -570,9 +576,11 @@ def _format_lift(result: dict) -> str:
 
 
 def _format_harness_matrix(result: dict) -> str:
+    gate = result.get("gate", {})
     lines = [
         f"Harness matrix: {result['run_id']}",
         f"Best harness: {result.get('best_harness')}",
+        f"Gate: {'PASS' if gate.get('passed', True) else 'FAIL'} mode={gate.get('mode', 'any')}",
         "Ranking:",
     ]
     for item in result.get("ranking", []):
@@ -580,6 +588,8 @@ def _format_harness_matrix(result: dict) -> str:
             f"  {item['rank']}. {item['runner_name']} "
             f"total_lift={item['total_lift']:+.3f} verdict={item['verdict']}"
         )
+    for failure in gate.get("failures", []):
+        lines.append(f"Gate failure: {failure.get('message', failure)}")
     lines.append(f"Matrix report: {result['artifacts']['matrix_report_json']}")
     return "\n".join(lines)
 

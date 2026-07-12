@@ -356,6 +356,17 @@ def _render_lift(run_path: Path, report: dict) -> str:
 
 
 def _render_matrix(run_path: Path, report: dict) -> str:
+    gate = report.get("gate") or {}
+    gate_failures = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('runner_name', '')))}</td>"
+        f"<td>{html.escape(str(item.get('type', '')))}</td>"
+        f"<td>{html.escape(str(item.get('message', '')))}</td>"
+        "</tr>"
+        for item in gate.get("failures", [])
+    )
+    if not gate_failures:
+        gate_failures = "<tr><td colspan=\"3\">No gate failures.</td></tr>"
     ranking = "".join(
         "<tr>"
         f"<td>{html.escape(str(item.get('rank', '')))}</td>"
@@ -385,9 +396,14 @@ def _render_matrix(run_path: Path, report: dict) -> str:
     body = f"""
     <section class="summary">
       <h2>{html.escape(str(report.get('run_id', 'matrix')))}</h2>
-      <p>Best harness <strong>{html.escape(str(report.get('best_harness', '')))}</strong> Harnesses <strong>{html.escape(str(report.get('harness_count', 0)))}</strong></p>
+      <p>Best harness <strong>{html.escape(str(report.get('best_harness', '')))}</strong> Harnesses <strong>{html.escape(str(report.get('harness_count', 0)))}</strong> Gate <strong>{html.escape('PASS' if gate.get('passed', True) else 'FAIL')}</strong></p>
       <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
       <p><a href="/artifacts">Browse raw artifacts</a> <a href="/artifacts/matrix_report.json">Open raw matrix_report.json</a></p>
+    </section>
+    <section>
+      <h2>Matrix Gate</h2>
+      <p>Mode <strong>{html.escape(str(gate.get('mode', 'any')))}</strong> Passing harnesses <strong>{html.escape(', '.join(str(item) for item in gate.get('passing_harnesses', [])) or '-')}</strong></p>
+      <table><thead><tr><th>Harness</th><th>Type</th><th>Message</th></tr></thead><tbody>{gate_failures}</tbody></table>
     </section>
     <section>
       <h2>Harness Ranking</h2>
