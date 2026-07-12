@@ -2237,6 +2237,11 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     data = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert data["passed"] is True
+    assert data["summary"]["status"] == "PASS"
+    assert data["summary"]["validation_count"] == 2
+    assert data["summary"]["comparison_count"] == 1
+    assert data["summary"]["failure_count"] == 0
+    assert data["summary"]["artifact_hints"]["dashboard"].endswith("dashboard")
     assert data["review_dir"] == str(review_dir)
     assert data["bundle_manifest"].endswith("bundle_manifest.json")
     assert (review_dir / "generic-skill-smoke.validation.json").exists()
@@ -2245,6 +2250,62 @@ def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
     assert (review_dir / "pack_review_ci_result.json").exists()
     assert (bundle_dir / "dashboard" / "index.html").exists()
     assert (bundle_dir / "skillbench-comment.md").exists()
+
+
+def test_pack_review_smoke_cli_summarizes_failures_and_hints(tmp_path, capsys):
+    review_dir = tmp_path / "pack-review-smoke"
+    bundle_dir = tmp_path / "pack-review-bundle"
+    gated_smoke = tmp_path / "gated-smoke.json"
+    gated_payload = json.loads(GENERIC_SKILL_SMOKE_PACK.read_text(encoding="utf-8"))
+    gated_payload.setdefault("metadata", {})["coverage_drift_gate"] = {
+        "fail_on_removed_tags": ["release"],
+        "fail_on_removed_types": ["ambiguous"],
+    }
+    gated_smoke.write_text(json.dumps(gated_payload), encoding="utf-8")
+
+    exit_code = skillbench_main(
+        [
+            "pack-review-smoke",
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            str(gated_smoke),
+            "--review-dir",
+            str(review_dir),
+            "--bundle-output",
+            str(bundle_dir),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert data["passed"] is False
+    assert data["summary"]["status"] == "FAIL"
+    assert data["summary"]["failure_count"] >= 1
+    assert data["summary"]["top_failures"][0]["type"] == "coverage_drift"
+    assert data["summary"]["artifact_hints"]["pack_review_ci_result"].endswith("pack_review_ci_result.json")
+    assert data["summary"]["artifact_hints"]["raw_artifacts"].endswith("raw_artifacts.json")
+
+
+def test_pack_review_smoke_cli_text_summary_includes_hints(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "pack-review-smoke",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--review-dir",
+            str(tmp_path / "review"),
+            "--bundle-output",
+            str(tmp_path / "bundle"),
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Summary: PASS" in output
+    assert "Validations: 2" in output
+    assert "Comparisons: 1" in output
+    assert "Artifact hints:" in output
+    assert "dashboard" in output
 
 
 def test_pack_review_smoke_cli_clean_removes_stale_outputs(tmp_path, capsys):

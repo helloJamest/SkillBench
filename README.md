@@ -339,7 +339,7 @@ python -m skillbench pack-review-smoke `
   --json
 ```
 
-This writes validation JSON, comparison JSON/Markdown, `pack_review_ci_result.json`, JUnit, SARIF, and a bundled dashboard for local inspection. Add `--clean` when repeated local runs should remove stale review and bundle artifacts before rebuilding.
+This writes validation JSON, comparison JSON/Markdown, `pack_review_ci_result.json`, JUnit, SARIF, and a bundled dashboard for local inspection. The command prints a compact summary with validation/comparison counts, gate failures, and artifact hints; add `--clean` when repeated local runs should remove stale review and bundle artifacts before rebuilding.
 
 Build one uploadable report bundle for CI artifacts or release evidence:
 

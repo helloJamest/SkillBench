@@ -598,11 +598,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
         else:
-            print(f"Pack review smoke: {'passed' if result['passed'] else 'failed'}")
-            print(f"Review dir: {result['review_dir']}")
-            print(f"Pack review CI result: {result['pack_review_ci_result']}")
-            print(f"Bundle: {result['bundle_manifest']}")
-            print(f"Dashboard: {result['dashboard']}")
+            print(_format_pack_review_smoke(result))
         return 0 if result["passed"] else 1
 
     if args.command == "bundle":
@@ -744,9 +740,11 @@ def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
     write_json(pack_review_path, pack_review)
 
     bundle_manifest = build_report_bundle(review_dir, bundle_output)
+    summary = _pack_review_smoke_summary(pack_review, bundle_manifest)
     return {
         "passed": bool(pack_review.get("passed")),
         "cleaned": bool(args.clean),
+        "summary": summary,
         "review_dir": str(review_dir),
         "bundle_output": str(bundle_output),
         "left_validation": str(left_validation_path),
@@ -759,6 +757,60 @@ def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
         "bundle_manifest": bundle_manifest["artifacts"]["manifest_json"],
         "dashboard": bundle_manifest["artifacts"]["dashboard_dir"],
     }
+
+
+def _pack_review_smoke_summary(pack_review: dict, bundle_manifest: dict) -> dict:
+    artifacts = bundle_manifest.get("artifacts", {})
+    failures = list(pack_review.get("failures") or [])
+    return {
+        "status": "PASS" if pack_review.get("passed") else "FAIL",
+        "validation_count": int(pack_review.get("validation_count", len(pack_review.get("validations") or []))),
+        "comparison_count": int(pack_review.get("comparison_count", len(pack_review.get("comparisons") or []))),
+        "failure_count": len(failures),
+        "top_failures": [
+            {
+                "type": str(failure.get("type", "failure")),
+                "message": str(failure.get("message", "")),
+                "artifact": str(failure.get("artifact", "")),
+            }
+            for failure in failures[:5]
+        ],
+        "artifact_hints": {
+            "dashboard": str(artifacts.get("dashboard_dir", "")),
+            "bundle_manifest": str(artifacts.get("manifest_json", "")),
+            "raw_artifacts": str(artifacts.get("raw_artifacts_json", "")),
+            "pack_review_ci_result": str(pack_review.get("report_path", "")),
+            "pr_comment": str(artifacts.get("pr_comment_md", "")),
+            "junit": str(artifacts.get("junit_xml", "")),
+            "sarif": str(artifacts.get("sarif_json", "")),
+        },
+    }
+
+
+def _format_pack_review_smoke(result: dict) -> str:
+    summary = result.get("summary") or {}
+    hints = summary.get("artifact_hints") or {}
+    lines = [
+        f"Summary: {summary.get('status', 'PASS' if result.get('passed') else 'FAIL')}",
+        f"Validations: {summary.get('validation_count', 0)}",
+        f"Comparisons: {summary.get('comparison_count', 0)}",
+        f"Gate failures: {summary.get('failure_count', 0)}",
+    ]
+    failures = summary.get("top_failures") or []
+    if failures:
+        lines.append("Top failures:")
+        for failure in failures:
+            lines.append(f"- {failure.get('type')}: {failure.get('message')} ({failure.get('artifact')})")
+    lines.extend(
+        [
+            "Artifact hints:",
+            f"- dashboard: {hints.get('dashboard') or result.get('dashboard')}",
+            f"- pack_review_ci_result: {hints.get('pack_review_ci_result') or result.get('pack_review_ci_result')}",
+            f"- raw_artifacts: {hints.get('raw_artifacts', '')}",
+            f"- bundle_manifest: {hints.get('bundle_manifest') or result.get('bundle_manifest')}",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _clean_output_dir(path: Path) -> None:
