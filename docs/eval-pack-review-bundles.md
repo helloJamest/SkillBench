@@ -66,6 +66,14 @@ Policy sources explain whether the gate came from right-hand eval pack metadata,
 To reproduce the CI evidence locally:
 
 ```bash
+skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json \
+  --review-dir .skillbench/pack-review-smoke \
+  --bundle-output .skillbench/pack-review-bundle
+```
+
+The command above is equivalent to the expanded workflow below:
+
+```bash
 mkdir -p .skillbench/pack-checklists
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json \
   --json > .skillbench/pack-checklists/generic-skill-smoke.validation.json

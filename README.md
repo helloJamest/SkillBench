@@ -30,6 +30,7 @@ skillbench pack-checklist examples/eval_packs/generic-skill-smoke.json --output 
 skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --json
 skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --output .skillbench/eval-pack-comparison.md
 skillbench pack-review-artifacts .skillbench/pack-checklists --junit .skillbench/pack-review-junit.xml --sarif .skillbench/pack-review.sarif --json
+skillbench pack-review-smoke examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --json
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -326,6 +327,19 @@ For eval pack review artifacts, point `pr-comment` at a directory containing `*.
 
 The repository also includes `.github/workflows/skillbench-pr-comment.yml`, an example pull request workflow that runs `skillbench ci`, renders `skillbench pr-comment`, and posts or updates a sticky SkillBench summary comment on the PR.
 
+Run the full eval pack review smoke locally with one command:
+
+```powershell
+python -m skillbench pack-review-smoke `
+  examples\eval_packs\generic-skill-smoke.json `
+  examples\eval_packs\generic-skill-release.json `
+  --review-dir .skillbench\pack-review-smoke `
+  --bundle-output .skillbench\pack-review-bundle `
+  --json
+```
+
+This writes validation JSON, comparison JSON/Markdown, `pack_review_ci_result.json`, JUnit, SARIF, and a bundled dashboard for local inspection.
+
 Build one uploadable report bundle for CI artifacts or release evidence:
 
 ```powershell
@@ -449,6 +463,7 @@ Every eval run writes:
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `skillbench-comment.md` or `skillbench-pack-review-comment.md` when `skillbench pr-comment --output <path>` is requested
 - `pack_review_ci_result.json`, `pack-review-junit.xml`, and `pack-review.sarif` when `skillbench pack-review-artifacts` is requested
+- `.skillbench/pack-review-smoke/` and `.skillbench/pack-review-bundle/` when `skillbench pack-review-smoke` is used for local pack review smoke checks
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, `dashboard/`, and generated `skillbench-comment.md`/JUnit/SARIF when `skillbench bundle --output <dir>` is requested
 - `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
 - `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts, JUnit/SARIF pack review artifacts, a bundled eval pack review dashboard, and posting a sticky eval pack review PR comment

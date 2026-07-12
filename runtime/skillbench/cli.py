@@ -201,6 +201,13 @@ def build_parser() -> argparse.ArgumentParser:
     pack_review_parser.add_argument("--sarif", help="Write SARIF 2.1.0 output for eval pack review failures.")
     pack_review_parser.add_argument("--json", action="store_true", help="Print machine-readable pack review CI result JSON.")
 
+    pack_smoke_parser = sub.add_parser("pack-review-smoke", help="Build a local eval pack review evidence bundle from two eval packs.")
+    pack_smoke_parser.add_argument("left", help="Baseline or smoke eval pack JSON.")
+    pack_smoke_parser.add_argument("right", help="Candidate or release eval pack JSON.")
+    pack_smoke_parser.add_argument("--review-dir", default=".skillbench/pack-review-smoke", help="Directory for intermediate validation, comparison, JUnit, SARIF, and CI artifacts.")
+    pack_smoke_parser.add_argument("--bundle-output", default=".skillbench/pack-review-bundle", help="Directory for the generated report bundle.")
+    pack_smoke_parser.add_argument("--json", action="store_true", help="Print machine-readable smoke result JSON.")
+
     bundle_parser = sub.add_parser("bundle", help="Build a publishable report bundle with dashboard, PR comment, CI artifacts, and raw artifact manifests.")
     bundle_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
     bundle_parser.add_argument("--output", required=True, help="Directory to write the bundle.")
@@ -584,6 +591,18 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"SARIF: {args.sarif}")
         return 0 if result.get("passed") else 1
 
+    if args.command == "pack-review-smoke":
+        result = _run_pack_review_smoke(args)
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(f"Pack review smoke: {'passed' if result['passed'] else 'failed'}")
+            print(f"Review dir: {result['review_dir']}")
+            print(f"Pack review CI result: {result['pack_review_ci_result']}")
+            print(f"Bundle: {result['bundle_manifest']}")
+            print(f"Dashboard: {result['dashboard']}")
+        return 0 if result["passed"] else 1
+
     if args.command == "bundle":
         manifest = build_report_bundle(args.source, args.output)
         if args.json:
@@ -662,6 +681,75 @@ def _case_selection_kwargs(args: argparse.Namespace) -> dict:
         "exclude_tags": args.exclude_tags,
         "case_mode": args.case_mode,
         "limit": args.limit,
+    }
+
+
+def _run_pack_review_smoke(args: argparse.Namespace) -> dict:
+    review_dir = Path(args.review_dir)
+    review_dir.mkdir(parents=True, exist_ok=True)
+
+    left = Path(args.left)
+    right = Path(args.right)
+    left_stem = left.stem
+    right_stem = right.stem
+
+    left_validation = validate_eval_set(left)
+    right_validation = validate_eval_set(right)
+    left_validation_path = review_dir / f"{left_stem}.validation.json"
+    right_validation_path = review_dir / f"{right_stem}.validation.json"
+    write_json(left_validation_path, left_validation)
+    write_json(right_validation_path, right_validation)
+
+    comparison = compare_eval_packs(left, right)
+    gate_args = argparse.Namespace(
+        right=right,
+        gate_policy=None,
+        fail_on_removed_tags=[],
+        fail_on_removed_dimensions=[],
+        fail_on_removed_categories=[],
+        fail_on_removed_types=[],
+        fail_on_removed_modes=[],
+    )
+    gate_policy, policy_sources = _pack_compare_gate_policy(gate_args)
+    gate_requested = bool(policy_sources)
+    gate = evaluate_eval_pack_comparison_gate(comparison, **gate_policy)
+    if gate_requested:
+        gate["policy_sources"] = policy_sources
+        comparison["gate"] = gate
+
+    comparison_name = f"{left_stem}-to-{right_stem}-comparison"
+    comparison_json_path = review_dir / f"{comparison_name}.json"
+    comparison_md_path = review_dir / f"{comparison_name}.md"
+    write_json(comparison_json_path, comparison)
+    comparison_md_path.write_text(
+        render_eval_pack_comparison_markdown(left, right, gate=gate if gate_requested else None),
+        encoding="utf-8",
+    )
+
+    pack_review_path = review_dir / "pack_review_ci_result.json"
+    pack_review = write_pack_review_ci_result(review_dir, pack_review_path)
+    junit_path = review_dir / "pack-review-junit.xml"
+    sarif_path = review_dir / "pack-review.sarif"
+    write_junit_xml(pack_review, junit_path)
+    write_sarif_report(pack_review, sarif_path)
+    pack_review["artifacts"]["junit_xml"] = str(junit_path)
+    pack_review["artifacts"]["sarif_json"] = str(sarif_path)
+    write_json(pack_review_path, pack_review)
+
+    bundle_manifest = build_report_bundle(review_dir, args.bundle_output)
+    return {
+        "passed": bool(pack_review.get("passed")),
+        "review_dir": str(review_dir),
+        "bundle_output": str(Path(args.bundle_output)),
+        "left_validation": str(left_validation_path),
+        "right_validation": str(right_validation_path),
+        "comparison_json": str(comparison_json_path),
+        "comparison_markdown": str(comparison_md_path),
+        "pack_review_ci_result": str(pack_review_path),
+        "junit_xml": str(junit_path),
+        "sarif_json": str(sarif_path),
+        "bundle_manifest": bundle_manifest["artifacts"]["manifest_json"],
+        "dashboard": bundle_manifest["artifacts"]["dashboard_dir"],
     }
 
 

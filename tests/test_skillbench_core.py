@@ -2217,6 +2217,36 @@ def test_report_bundle_accepts_eval_pack_review_ci_result_file(tmp_path):
     assert "SkillBench Eval Pack Review" in (tmp_path / "pack-review-file-bundle" / "skillbench-comment.md").read_text(encoding="utf-8")
 
 
+def test_pack_review_smoke_cli_builds_review_bundle(tmp_path, capsys):
+    review_dir = tmp_path / "pack-review-smoke"
+    bundle_dir = tmp_path / "pack-review-bundle"
+
+    exit_code = skillbench_main(
+        [
+            "pack-review-smoke",
+            str(GENERIC_SKILL_SMOKE_PACK),
+            str(EVAL_PACKS_DIR / "generic-skill-release.json"),
+            "--review-dir",
+            str(review_dir),
+            "--bundle-output",
+            str(bundle_dir),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["passed"] is True
+    assert data["review_dir"] == str(review_dir)
+    assert data["bundle_manifest"].endswith("bundle_manifest.json")
+    assert (review_dir / "generic-skill-smoke.validation.json").exists()
+    assert (review_dir / "generic-skill-release.validation.json").exists()
+    assert (review_dir / "generic-skill-smoke-to-generic-skill-release-comparison.json").exists()
+    assert (review_dir / "pack_review_ci_result.json").exists()
+    assert (bundle_dir / "dashboard" / "index.html").exists()
+    assert (bundle_dir / "skillbench-comment.md").exists()
+
+
 def test_report_bundle_reads_utf8_bom_external_ci_result_json(tmp_path, capsys):
     exit_code = skillbench_main(
         [
@@ -2383,6 +2413,8 @@ def test_eval_pack_review_bundle_guide_is_linked_and_actionable():
     guide = PACK_REVIEW_BUNDLE_GUIDE.read_text(encoding="utf-8")
 
     assert "docs/eval-pack-review-bundles.md" in readme
+    assert "pack-review-smoke" in readme
+    assert "pack-review-smoke" in guide
     assert "eval-pack-review-bundle" in guide
     assert "dashboard/index.html" in guide
     assert "skillbench-comment.md" in guide
