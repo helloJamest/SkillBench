@@ -22,7 +22,7 @@ from skillbench.lift import run_lift
 from skillbench.matrix import run_harness_matrix
 from skillbench.judges import build_judge_backend
 from skillbench.runners import FullAgentRunner, build_agent_adapter
-from skillbench.reports import build_ci_result, build_comparison, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
+from skillbench.reports import build_ci_result, build_comparison, build_harness_matrix_report, build_junit_xml, build_sarif_report, write_comparison, write_sarif_report
 from skillbench.schemas import EvalCase, EvalSet
 
 
@@ -1248,6 +1248,78 @@ def test_harness_matrix_writes_ranked_report(tmp_path):
     assert all("total_lift" in item and "verdict" in item for item in data["harnesses"])
 
 
+def test_harness_matrix_report_summarizes_confidence_cost_and_efficiency():
+    report = build_harness_matrix_report(
+        run_id="matrix-unit",
+        skill_path="SKILL.md",
+        eval_set_id="eval",
+        harness_results=[
+            {
+                "runner_name": "codex-cli",
+                "total_lift": 2.0,
+                "mean_case_lift": 1.25,
+                "verdict": "HELPS",
+                "confidence": {
+                    "method": "deterministic-bootstrap-over-case-deltas",
+                    "samples": 100,
+                    "mean_case_lift_ci95": {"low": 0.5, "high": 2.0},
+                },
+                "artifacts": {"lift_report_json": "codex/lift_report.json"},
+            }
+        ],
+        harness_costs={"codex-cli": 0.25},
+    )
+
+    harness = report["harnesses"][0]
+    assert harness["confidence_summary"] == {
+        "method": "deterministic-bootstrap-over-case-deltas",
+        "samples": 100,
+        "mean_case_lift_ci95_low": 0.5,
+        "mean_case_lift_ci95_high": 2.0,
+        "mean_case_lift_ci95_width": 1.5,
+    }
+    assert harness["efficiency"]["estimated_cost_usd"] == 0.25
+    assert harness["efficiency"]["lift_per_usd"] == 8.0
+    assert report["efficiency_ranking"][0]["runner_name"] == "codex-cli"
+
+
+def test_harness_matrix_full_agent_summarizes_latency_and_cost(tmp_path):
+    command = f'"{sys.executable}" -c "print(\'agent-ok\')"'
+    eval_set = EvalSet(
+        id="matrix-latency-eval",
+        cases=[
+            EvalCase(
+                id="matrix-latency-case",
+                mode="full-agent",
+                type="behavior",
+                input="run a tiny agent command",
+                dimensions=["evidence_quality", "safety"],
+            )
+        ],
+    )
+    eval_set_path = write_eval_set(eval_set, tmp_path / "matrix-latency-eval.json")
+    config = SkillBenchConfig(output_root=tmp_path / "runs", agent_command=command)
+
+    result = run_harness_matrix(
+        SAMPLE_SKILL,
+        eval_set_path=eval_set_path,
+        output_dir=tmp_path / "matrix",
+        harnesses=["custom-command"],
+        config=config,
+        mode_override="full-agent",
+        harness_costs={"custom-command": 0.02},
+    )
+
+    data = json.loads(Path(result["artifacts"]["matrix_report_json"]).read_text(encoding="utf-8"))
+    harness = data["harnesses"][0]
+    assert harness["latency"]["baseline_case_count"] == 1
+    assert harness["latency"]["candidate_case_count"] == 1
+    assert harness["latency"]["total_case_count"] == 2
+    assert harness["latency"]["total_elapsed_sec"] >= 0
+    assert harness["efficiency"]["estimated_cost_usd"] == 0.02
+    assert "lift_per_second" in harness["efficiency"]
+
+
 def test_harness_matrix_gate_fails_when_lift_threshold_is_not_met(tmp_path):
     result = run_harness_matrix(
         SAMPLE_SKILL,
@@ -1294,6 +1366,28 @@ def test_harness_matrix_cli_json_outputs_machine_readable_summary(tmp_path, caps
     assert Path(data["artifacts"]["matrix_report_json"]).exists()
 
 
+def test_harness_matrix_cli_accepts_harness_cost(tmp_path, capsys):
+    exit_code = skillbench_main(
+        [
+            "harness-matrix",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "matrix"),
+            "--harness",
+            "custom-command",
+            "--harness-cost",
+            "custom-command=0.25",
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert data["harnesses"][0]["efficiency"]["estimated_cost_usd"] == 0.25
+
+
 def test_harness_matrix_cli_returns_nonzero_for_failed_gate(tmp_path, capsys):
     exit_code = skillbench_main(
         [
@@ -1331,6 +1425,7 @@ def test_dashboard_renders_harness_matrix_report(tmp_path):
 
     assert "SkillBench Harness Matrix" in html
     assert "Matrix Gate" in html
+    assert "Efficiency" in html
     assert "Harness Ranking" in html
     assert "custom-command" in html
     assert "codex-cli" in html

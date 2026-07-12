@@ -393,6 +393,20 @@ def _render_matrix(run_path: Path, report: dict) -> str:
     )
     if not harnesses:
         harnesses = "<tr><td colspan=\"5\">No harness data.</td></tr>"
+    efficiency = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('runner_name', '')))}</td>"
+        f"<td>{html.escape(_format_number((item.get('efficiency') or {}).get('estimated_cost_usd')))}</td>"
+        f"<td>{html.escape(_format_number((item.get('latency') or {}).get('total_elapsed_sec')))}</td>"
+        f"<td>{html.escape(_format_number((item.get('latency') or {}).get('mean_case_elapsed_sec')))}</td>"
+        f"<td>{html.escape(_format_number((item.get('efficiency') or {}).get('lift_per_usd'), signed=True))}</td>"
+        f"<td>{html.escape(_format_number((item.get('efficiency') or {}).get('lift_per_second'), signed=True))}</td>"
+        f"<td>{html.escape(_format_number((item.get('confidence_summary') or {}).get('mean_case_lift_ci95_width')))}</td>"
+        "</tr>"
+        for item in report.get("harnesses", [])
+    )
+    if not efficiency:
+        efficiency = "<tr><td colspan=\"7\">No efficiency data.</td></tr>"
     body = f"""
     <section class="summary">
       <h2>{html.escape(str(report.get('run_id', 'matrix')))}</h2>
@@ -412,6 +426,10 @@ def _render_matrix(run_path: Path, report: dict) -> str:
     <section>
       <h2>Harness Scores</h2>
       <table><thead><tr><th>Harness</th><th>Baseline</th><th>Candidate</th><th>Lift</th><th>Worst Case</th></tr></thead><tbody>{harnesses}</tbody></table>
+    </section>
+    <section>
+      <h2>Efficiency</h2>
+      <table><thead><tr><th>Harness</th><th>Cost USD</th><th>Total Seconds</th><th>Mean Seconds</th><th>Lift / USD</th><th>Lift / Second</th><th>CI95 Width</th></tr></thead><tbody>{efficiency}</tbody></table>
     </section>
     """
     return _page("SkillBench Harness Matrix", body)

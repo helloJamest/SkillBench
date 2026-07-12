@@ -85,6 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     matrix_parser.add_argument("--eval-set")
     matrix_parser.add_argument("--output-dir")
     matrix_parser.add_argument("--harness", action="append", choices=AGENT_RUNNERS, dest="harnesses", help="Agent runner to include. Repeat for multiple harnesses.")
+    matrix_parser.add_argument("--harness-cost", action="append", default=[], metavar="RUNNER=USD", help="Estimated run cost for a harness. Repeat for multiple harnesses.")
     matrix_parser.add_argument("--baseline-skill", help="Optional explicit no-skill baseline document.")
     matrix_parser.add_argument("--mode", choices=["judge-only", "full-agent"])
     matrix_parser.add_argument("--min-lift", type=float, default=0.1)
@@ -269,6 +270,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "harness-matrix":
         config = SkillBenchConfig.from_env(args.output_dir)
+        try:
+            harness_costs = _parse_harness_costs(args.harness_cost)
+        except ValueError as exc:
+            parser.error(str(exc))
         if args.judge_backend:
             config.judge_backend = args.judge_backend
         if args.judge_command:
@@ -287,6 +292,7 @@ def main(argv: list[str] | None = None) -> int:
             mode_override=args.mode,
             min_lift=args.min_lift,
             bootstrap_samples=args.bootstrap_samples,
+            harness_costs=harness_costs,
             min_total_lift=args.min_total_lift,
             min_mean_case_lift=args.min_mean_case_lift,
             require_all_pass=args.require_all_pass,
@@ -478,6 +484,25 @@ def _apply_agent_args(config: SkillBenchConfig, args: argparse.Namespace) -> Non
         config.agent_command = args.agent_command
 
 
+def _parse_harness_costs(values: list[str]) -> dict[str, float]:
+    costs: dict[str, float] = {}
+    for value in values or []:
+        if "=" not in value:
+            raise ValueError(f"Invalid --harness-cost value {value!r}; expected RUNNER=USD.")
+        runner, cost_text = value.split("=", 1)
+        runner = runner.strip()
+        if runner not in AGENT_RUNNERS:
+            raise ValueError(f"Unsupported harness in --harness-cost: {runner}")
+        try:
+            cost = float(cost_text)
+        except ValueError as exc:
+            raise ValueError(f"Invalid cost for {runner}: {cost_text}") from exc
+        if cost < 0:
+            raise ValueError(f"Cost for {runner} must be non-negative.")
+        costs[runner] = cost
+    return costs
+
+
 def _case_inventory(eval_set) -> dict:
     cases = [
         {
@@ -588,10 +613,24 @@ def _format_harness_matrix(result: dict) -> str:
             f"  {item['rank']}. {item['runner_name']} "
             f"total_lift={item['total_lift']:+.3f} verdict={item['verdict']}"
         )
+    if result.get("efficiency_ranking"):
+        lines.append("Efficiency:")
+        for item in result.get("efficiency_ranking", []):
+            lines.append(
+                f"  {item['rank']}. {item['runner_name']} "
+                f"lift_per_usd={_format_optional_number(item.get('lift_per_usd'))} "
+                f"lift_per_second={_format_optional_number(item.get('lift_per_second'))}"
+            )
     for failure in gate.get("failures", []):
         lines.append(f"Gate failure: {failure.get('message', failure)}")
     lines.append(f"Matrix report: {result['artifacts']['matrix_report_json']}")
     return "\n".join(lines)
+
+
+def _format_optional_number(value: object) -> str:
+    if isinstance(value, (int, float)):
+        return f"{value:.3f}".rstrip("0").rstrip(".")
+    return "-"
 
 
 def _format_benchmark(result: dict) -> str:
