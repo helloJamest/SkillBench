@@ -67,4 +67,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.31 shipped a machine-readable changelog for pack review output contracts.
 - v0.5.32 shipped contract metadata emission in `pack-review-smoke --json`.
 - v0.5.33 shipped a contract-aware consumer example for validating smoke JSON.
-- Next: add a small compatibility guard example for rejecting unsupported contract major versions.
+- v0.5.34 shipped a compatibility guard example for rejecting unsupported contract major versions.
+- Next: add a concise release note template for pack review output contract changes.

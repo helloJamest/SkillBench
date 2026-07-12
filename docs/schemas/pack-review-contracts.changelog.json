@@ -1,7 +1,7 @@
 {
   "schema_version": "skillbench.pack-review-contract-changelog.v1",
   "contract_id": "skillbench.pack-review-smoke-result",
-  "latest_version": "0.5.33",
+  "latest_version": "0.5.34",
   "stable_fields": [
     "contract.id",
     "contract.version",
@@ -41,6 +41,16 @@
     "documentation": "Docs-only changes do not change the JSON output contract."
   },
   "entries": [
+    {
+      "version": "0.5.34",
+      "date": "2026-07-12",
+      "compatibility": "documentation",
+      "schema": "docs/schemas/pack-review-smoke-result.schema.json",
+      "changes": [
+        "Added a consumer compatibility guard example for rejecting unsupported contract major versions."
+      ],
+      "migration": "No output shape changes. Consumers can copy the guard to fail early when contract.version crosses an unsupported major version."
+    },
     {
       "version": "0.5.33",
       "date": "2026-07-12",

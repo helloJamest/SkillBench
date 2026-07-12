@@ -131,9 +131,14 @@ payload_path = Path(".skillbench/pack-review-smoke-result.json")
 payload = json.loads(payload_path.read_text(encoding="utf-8"))
 
 expected_contract_id = "skillbench.pack-review-smoke-result"
+supported_contract_major = 0
 contract = payload["contract"]
 if contract["id"] != expected_contract_id:
     raise SystemExit(f"Unsupported SkillBench contract: {contract['id']}")
+
+contract_major = int(contract["version"].split(".", 1)[0])
+if contract_major != supported_contract_major:
+    raise SystemExit(f"Unsupported SkillBench contract version: {contract['version']}")
 
 schema_path = Path(payload["contract"]["schema"])
 changelog_path = Path(payload["contract"]["changelog"])
