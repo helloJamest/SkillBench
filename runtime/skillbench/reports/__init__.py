@@ -4,6 +4,7 @@ from .compare import build_comparison, write_comparison
 from .junit import build_junit_xml, write_junit_xml
 from .lift import build_lift_report, write_lift_report
 from .matrix import build_harness_matrix_ci_result, build_harness_matrix_gate, build_harness_matrix_report, write_harness_matrix_report
+from .pack_review import build_pack_review_ci_result, write_pack_review_ci_result
 from .pr_comment import PR_COMMENT_MARKER, render_pr_comment, write_pr_comment
 from .sarif import build_sarif_report, write_sarif_report
 from .summary import write_summary
@@ -16,6 +17,7 @@ __all__ = [
     "build_report_bundle",
     "build_junit_xml",
     "build_lift_report",
+    "build_pack_review_ci_result",
     "build_harness_matrix_report",
     "build_harness_matrix_ci_result",
     "build_harness_matrix_gate",
@@ -27,6 +29,7 @@ __all__ = [
     "write_evolution_timeline",
     "write_junit_xml",
     "write_lift_report",
+    "write_pack_review_ci_result",
     "write_harness_matrix_report",
     "write_pr_comment",
     "write_sarif_report",

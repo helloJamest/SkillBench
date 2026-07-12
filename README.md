@@ -29,6 +29,7 @@ skillbench bootstrap-pack generic-skill-smoke-v1 --target path/to/your-skill --j
 skillbench pack-checklist examples/eval_packs/generic-skill-smoke.json --output .skillbench/eval-pack-checklist.md
 skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --json
 skillbench pack-compare examples/eval_packs/generic-skill-smoke.json examples/eval_packs/generic-skill-release.json --output .skillbench/eval-pack-comparison.md
+skillbench pack-review-artifacts .skillbench/pack-checklists --junit .skillbench/pack-review-junit.xml --sarif .skillbench/pack-review.sarif --json
 skillbench validate-cases examples/eval_packs/generic-skill-smoke.json --json
 skillbench lift examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --json
 skillbench harness-matrix examples/skills/sample-skill/SKILL.md --eval-set examples/eval_sets/basic-skill-eval.json --harness custom-command --harness codex-cli --json
@@ -338,7 +339,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -447,9 +448,10 @@ Every eval run writes:
 - `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
 - `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `skillbench-comment.md` or `skillbench-pack-review-comment.md` when `skillbench pr-comment --output <path>` is requested
+- `pack_review_ci_result.json`, `pack-review-junit.xml`, and `pack-review.sarif` when `skillbench pack-review-artifacts` is requested
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when `skillbench bundle --output <dir>` is requested
 - `.github/workflows/skillbench-bundles.yml` as an example workflow for uploading CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts and posting a sticky eval pack review PR comment
+- `.github/workflows/skillbench-pack-checklists.yml` as an example workflow for uploading eval pack checklist/comparison artifacts, JUnit/SARIF pack review artifacts, and posting a sticky eval pack review PR comment
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`

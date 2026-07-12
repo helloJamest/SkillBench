@@ -2039,6 +2039,48 @@ def test_pr_comment_renders_eval_pack_review_artifacts(tmp_path):
     assert "generic-skill-smoke-to-release-comparison.md" in markdown
 
 
+def test_pack_review_artifacts_cli_writes_ci_junit_and_sarif(tmp_path, capsys):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+    comparison["gate"] = {
+        "passed": False,
+        "policy_sources": ["right.metadata.coverage_drift_gate"],
+        "violations": [{"coverage": "tags", "reason": "removed", "values": ["smoke"]}],
+    }
+    (review_dir / "generic-skill-smoke-to-release-comparison.json").write_text(json.dumps(comparison), encoding="utf-8")
+    junit_path = review_dir / "pack-review-junit.xml"
+    sarif_path = review_dir / "pack-review.sarif"
+
+    exit_code = skillbench_main(
+        [
+            "pack-review-artifacts",
+            str(review_dir),
+            "--junit",
+            str(junit_path),
+            "--sarif",
+            str(sarif_path),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert data["passed"] is False
+    assert data["report_path"].endswith("pack_review_ci_result.json")
+    assert data["artifacts"]["junit_xml"] == str(junit_path)
+    assert data["artifacts"]["sarif_json"] == str(sarif_path)
+    assert any(failure["type"] == "coverage_drift" for failure in data["failures"])
+    assert "failures=\"1\"" in junit_path.read_text(encoding="utf-8")
+    sarif = json.loads(sarif_path.read_text(encoding="utf-8"))
+    assert sarif["runs"][0]["results"][0]["ruleId"] == "skillbench.coverage_drift"
+    assert sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"].endswith("pack_review_ci_result.json")
+
+
 def test_report_bundle_writes_dashboard_comment_ci_artifacts_and_raw_manifest(tmp_path, capsys):
     exit_code = skillbench_main(
         [
@@ -2205,6 +2247,10 @@ def test_pack_checklist_workflow_uploads_eval_pack_review_artifacts():
     assert "skillbench pack-checklist" in workflow
     assert "skillbench pack-compare" in workflow
     assert "skillbench pr-comment .skillbench/pack-checklists" in workflow
+    assert "skillbench pack-review-artifacts .skillbench/pack-checklists" in workflow
+    assert "pack_review_ci_result.json" in workflow
+    assert "pack-review-junit.xml" in workflow
+    assert "pack-review.sarif" in workflow
     assert "skillbench-pack-review-comment.md" in workflow
     assert "issues: write" in workflow
     assert "pull-requests: write" in workflow

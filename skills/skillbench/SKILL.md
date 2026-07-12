@@ -17,6 +17,7 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
    - `bootstrap-pack`: copy a bundled or custom eval pack into a target skill project for customization.
    - `pack-checklist`: render a Markdown authoring checklist for reviewing an eval pack before CI.
    - `pack-compare`: compare eval pack versions for case and coverage changes, with optional removed-coverage CI gates.
+   - `pack-review-artifacts`: build pack review CI result JSON, JUnit, and SARIF from eval pack review artifacts.
    - `list-cases`: inspect case IDs, tags, modes, and dimensions before filtering.
    - `eval`: score one candidate against an eval set.
    - `lift`: compare with-skill and without-skill runs to measure skill utility.
@@ -100,11 +101,12 @@ Every eval/evo run should produce:
 - `comet_offline.jsonl` when Comet ML is unavailable
 - `ci_result.json` when using CI gates
 - `skillbench-comment.md` or `skillbench-pack-review-comment.md` when using `pr-comment --output <path>` for GitHub PR summaries
+- `pack_review_ci_result.json`, pack review JUnit, and pack review SARIF when using `pack-review-artifacts`
 - `bundle_manifest.json`, `raw_artifacts.json`, copied `raw/` artifacts, and `dashboard/` when using `bundle --output <dir>`
 - SARIF output when `ci --sarif <path>` is requested
 - `.github/workflows/skillbench-pr-comment.yml` as an example PR comment workflow that delegates summary rendering to `skillbench pr-comment`
 - `.github/workflows/skillbench-bundles.yml` as an example artifact workflow that uploads CI and harness matrix report bundles
-- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, coverage drift gate evidence, and posts or updates a reusable pack review PR comment
+- `.github/workflows/skillbench-pack-checklists.yml` as an example artifact workflow that uploads eval pack checklist Markdown, validation JSON, smoke-to-release comparison Markdown/JSON, coverage drift gate evidence, JUnit/SARIF pack review artifacts, and posts or updates a reusable pack review PR comment
 - `comparison.json` when comparing runs, rendered at `/comparison` and exported as `comparison/index.html` when dashboard artifacts are built
 - `calibration.json` when calibrating judge stability
 - `benchmark.json` when running bundled quality fixtures

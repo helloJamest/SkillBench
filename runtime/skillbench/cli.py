@@ -13,7 +13,7 @@ from .evolve import run_evolution
 from .evaluate_skill import run_evaluation
 from .lift import run_lift
 from .matrix import run_harness_matrix
-from .observability.logging_io import read_json, resolve_run_dir
+from .observability.logging_io import read_json, resolve_run_dir, write_json
 from .reports import (
     build_ci_result,
     build_comparison,
@@ -23,6 +23,7 @@ from .reports import (
     write_comparison,
     write_harness_matrix_report,
     write_junit_xml,
+    write_pack_review_ci_result,
     write_pr_comment,
     write_sarif_report,
 )
@@ -192,6 +193,13 @@ def build_parser() -> argparse.ArgumentParser:
     pr_comment_parser = sub.add_parser("pr-comment", help="Render a GitHub PR comment markdown summary for a run, report artifact, or eval pack review artifact directory.")
     pr_comment_parser.add_argument("source", help="Run directory, latest pointer, report JSON, CI JSON, or eval pack review artifact directory.")
     pr_comment_parser.add_argument("--output", help="Write the markdown comment to this path.")
+
+    pack_review_parser = sub.add_parser("pack-review-artifacts", help="Build CI artifacts for an eval pack review artifact directory.")
+    pack_review_parser.add_argument("review_dir", help="Directory containing eval pack validation and comparison artifacts.")
+    pack_review_parser.add_argument("--output", help="Write pack review CI result JSON to this path. Defaults under review_dir.")
+    pack_review_parser.add_argument("--junit", help="Write JUnit XML for eval pack review failures.")
+    pack_review_parser.add_argument("--sarif", help="Write SARIF 2.1.0 output for eval pack review failures.")
+    pack_review_parser.add_argument("--json", action="store_true", help="Print machine-readable pack review CI result JSON.")
 
     bundle_parser = sub.add_parser("bundle", help="Build a publishable report bundle with dashboard, PR comment, CI artifacts, and raw artifact manifests.")
     bundle_parser.add_argument("source", help="Run directory, latest pointer, report.json, lift_report.json, matrix_report.json, or ci_result.json.")
@@ -554,6 +562,27 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(markdown)
         return 0
+
+    if args.command == "pack-review-artifacts":
+        output_path = Path(args.output) if args.output else Path(args.review_dir) / "pack_review_ci_result.json"
+        result = write_pack_review_ci_result(args.review_dir, output_path)
+        if args.junit:
+            write_junit_xml(result, args.junit)
+            result["artifacts"]["junit_xml"] = str(Path(args.junit))
+        if args.sarif:
+            write_sarif_report(result, args.sarif)
+            result["artifacts"]["sarif_json"] = str(Path(args.sarif))
+        if args.junit or args.sarif:
+            write_json(output_path, result)
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            print(f"Pack review CI result: {output_path}")
+            if args.junit:
+                print(f"JUnit: {args.junit}")
+            if args.sarif:
+                print(f"SARIF: {args.sarif}")
+        return 0 if result.get("passed") else 1
 
     if args.command == "bundle":
         manifest = build_report_bundle(args.source, args.output)

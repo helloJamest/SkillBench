@@ -66,6 +66,17 @@ jobs:
           fi
           skillbench pr-comment .skillbench/pack-checklists \
             --output .skillbench/pack-checklists/skillbench-pack-review-comment.md
+          set +e
+          skillbench pack-review-artifacts .skillbench/pack-checklists \
+            --output .skillbench/pack-checklists/pack_review_ci_result.json \
+            --junit .skillbench/pack-checklists/pack-review-junit.xml \
+            --sarif .skillbench/pack-checklists/pack-review.sarif \
+            --json | tee .skillbench/pack-checklists/pack_review_ci_result.output.json
+          pack_review_artifacts_status=${PIPESTATUS[0]}
+          set -e
+          if [ "${pack_review_artifacts_status}" -ne 0 ]; then
+            status=1
+          fi
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           exit 0
 
