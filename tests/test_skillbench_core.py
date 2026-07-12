@@ -1077,6 +1077,52 @@ def test_export_dashboard_writes_static_report_pages(tmp_path):
     assert "Raw Artifact" in raw_report_page.read_text(encoding="utf-8")
 
 
+def test_dashboard_renders_eval_pack_review_artifacts(tmp_path):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+    comparison["gate"] = {"passed": True, "policy_sources": ["right.metadata.coverage_drift_gate"], "violations": []}
+    (review_dir / "generic-skill-smoke-to-release-comparison.json").write_text(json.dumps(comparison), encoding="utf-8")
+    skillbench_main(["pack-review-artifacts", str(review_dir)])
+
+    html = render_dashboard_html(review_dir)
+
+    assert "SkillBench Eval Pack Review" in html
+    assert "Validations" in html
+    assert "Coverage Drift" in html
+    assert "generic-skill-smoke-v1" in html
+    assert "generic-skill-release-v1" in html
+    assert "right.metadata.coverage_drift_gate" in html
+    assert "/artifacts/pack_review_ci_result.json" in html
+
+
+def test_export_dashboard_writes_eval_pack_review_pages(tmp_path, monkeypatch):
+    review_dir = tmp_path / "pack-review"
+    review_dir.mkdir()
+    (review_dir / "generic-skill-smoke.validation.json").write_text(
+        json.dumps(validate_eval_set(GENERIC_SKILL_SMOKE_PACK)),
+        encoding="utf-8",
+    )
+    comparison = compare_eval_packs(GENERIC_SKILL_SMOKE_PACK, EVAL_PACKS_DIR / "generic-skill-release.json")
+    comparison["gate"] = {"passed": True, "policy_sources": ["right.metadata.coverage_drift_gate"], "violations": []}
+    (review_dir / "generic-skill-smoke-to-release-comparison.json").write_text(json.dumps(comparison), encoding="utf-8")
+    skillbench_main(["pack-review-artifacts", str(review_dir)])
+
+    monkeypatch.chdir(tmp_path)
+    manifest = export_dashboard(Path("pack-review"), Path("site"))
+
+    assert "index.html" in manifest["pages"]
+    assert "artifacts/index.html" in manifest["pages"]
+    assert "artifacts/pack_review_ci_result.json/index.html" in manifest["pages"]
+    index_html = (tmp_path / "site" / "index.html").read_text(encoding="utf-8")
+    assert "SkillBench Eval Pack Review" in index_html
+    assert "artifacts/index.html" in index_html
+
+
 def test_dashboard_renders_run_comparison_page(tmp_path):
     left = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "left")
     right = run_evaluation(SAMPLE_SKILL, eval_set_path=EVAL_SET, output_dir=tmp_path / "right")

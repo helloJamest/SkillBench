@@ -1,3 +1,3 @@
 """SkillBench runtime package."""
 
-__version__ = "0.5.21"
+__version__ = "0.5.22"

@@ -82,7 +82,10 @@ def render_dashboard_html(run_dir: str | Path) -> str:
         matrix_path = run_path / "matrix_report.json"
         if matrix_path.exists():
             return _render_matrix(run_path, read_json(matrix_path))
-        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, or matrix_report.json found in {run_path}")
+        pack_review_path = run_path / "pack_review_ci_result.json"
+        if pack_review_path.exists():
+            return _render_pack_review(run_path, read_json(pack_review_path))
+        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, matrix_report.json, or pack_review_ci_result.json found in {run_path}")
     report = read_json(report_path)
     if route_case_id:
         case = _find_case(report, route_case_id)
@@ -167,6 +170,13 @@ def create_app(run_dir: str | Path):
         if matrix_path.exists():
             return JSONResponse(read_json(matrix_path))
         return JSONResponse({"error": "matrix_report.json not found"}, status_code=404)
+
+    @app.get("/api/pack-review")
+    def api_pack_review():
+        pack_review_path = run_path / "pack_review_ci_result.json"
+        if pack_review_path.exists():
+            return JSONResponse(read_json(pack_review_path))
+        return JSONResponse({"error": "pack_review_ci_result.json not found"}, status_code=404)
 
     @app.get("/artifacts", response_class=HTMLResponse)
     def artifacts_index():
@@ -433,6 +443,81 @@ def _render_matrix(run_path: Path, report: dict) -> str:
     </section>
     """
     return _page("SkillBench Harness Matrix", body)
+
+
+def _render_pack_review(run_path: Path, result: dict) -> str:
+    validations = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('eval_set_id', '')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('cases')))}</td>"
+        f"<td>{html.escape('PASS' if item.get('passed') else 'FAIL')}</td>"
+        f"<td>{_artifact_link(run_path, item.get('path'), 'validation')}</td>"
+        "</tr>"
+        for item in result.get("validations", [])
+    )
+    if not validations:
+        validations = "<tr><td colspan=\"4\">No validation artifacts found.</td></tr>"
+
+    comparisons = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('left_eval_set_id', '-')))} -> {html.escape(str(item.get('right_eval_set_id', '-')))}</td>"
+        f"<td>{html.escape(_format_number(item.get('case_delta'), signed=True))}</td>"
+        f"<td>{html.escape('PASS' if item.get('passed', True) else 'FAIL')}</td>"
+        f"<td>{html.escape(', '.join(str(source) for source in item.get('policy_sources', [])) or '-')}</td>"
+        f"<td>{_artifact_link(run_path, item.get('path'), 'comparison')}</td>"
+        "</tr>"
+        for item in result.get("comparisons", [])
+    )
+    if not comparisons:
+        comparisons = "<tr><td colspan=\"5\">No comparison artifacts found.</td></tr>"
+
+    failures = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('type', '')))}</td>"
+        f"<td>{html.escape(str(item.get('message', '')))}</td>"
+        f"<td>{_artifact_link(run_path, item.get('artifact'), 'artifact')}</td>"
+        "</tr>"
+        for item in result.get("failures", [])
+    )
+    if not failures:
+        failures = "<tr><td colspan=\"3\">No gate failures.</td></tr>"
+
+    body = f"""
+    <section class="summary">
+      <h2>Eval Pack Review</h2>
+      <p>Status <strong>{html.escape('PASS' if result.get('passed') else 'FAIL')}</strong> Validations <strong>{html.escape(str(result.get('validation_count', 0)))}</strong> Comparisons <strong>{html.escape(str(result.get('comparison_count', 0)))}</strong></p>
+      <p>Run directory: <code>{html.escape(str(run_path))}</code></p>
+      <p><a href="/artifacts">Browse raw artifacts</a> <a href="/artifacts/pack_review_ci_result.json">Open raw pack_review_ci_result.json</a></p>
+    </section>
+    <section>
+      <h2>Validations</h2>
+      <table><thead><tr><th>Eval Pack</th><th>Cases</th><th>Status</th><th>Artifact</th></tr></thead><tbody>{validations}</tbody></table>
+    </section>
+    <section>
+      <h2>Coverage Drift</h2>
+      <table><thead><tr><th>Comparison</th><th>Case Delta</th><th>Gate</th><th>Policy Sources</th><th>Artifact</th></tr></thead><tbody>{comparisons}</tbody></table>
+    </section>
+    <section>
+      <h2>Gate Failures</h2>
+      <table><thead><tr><th>Type</th><th>Message</th><th>Artifact</th></tr></thead><tbody>{failures}</tbody></table>
+    </section>
+    """
+    return _page("SkillBench Eval Pack Review", body)
+
+
+def _artifact_link(run_path: Path, value: object, label: str) -> str:
+    if not value:
+        return html.escape(label)
+    path = Path(str(value))
+    candidates = [path] if path.is_absolute() else [run_path / path, Path.cwd() / path, path]
+    for candidate in candidates:
+        try:
+            rel = candidate.resolve().relative_to(run_path.resolve()).as_posix()
+            if (run_path / rel).exists():
+                return f'<a href="/artifacts/{quote(rel, safe="/")}">{html.escape(label)}</a>'
+        except ValueError:
+            continue
+    return html.escape(str(value))
 
 
 def _matrix_lift_report_link(run_path: Path, item: dict) -> str:

@@ -9,14 +9,15 @@ from .app import _artifact_rel, _iter_artifacts, render_dashboard_html
 
 
 def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
-    run_path = resolve_run_dir(run_dir)
-    output = ensure_dir(output_dir)
+    run_path = resolve_run_dir(run_dir).resolve()
+    output = ensure_dir(Path(output_dir).resolve())
     pages: list[str] = []
 
     report_path = run_path / "report.json"
     evolution_path = run_path / "evolution.json"
     lift_path = run_path / "lift_report.json"
     matrix_path = run_path / "matrix_report.json"
+    pack_review_path = run_path / "pack_review_ci_result.json"
     if report_path.exists():
         report = read_json(report_path)
         index_html = _rewrite_report_index(render_dashboard_html(run_path), report)
@@ -51,8 +52,12 @@ def export_dashboard(run_dir: str | Path, output_dir: str | Path) -> dict[str, A
         index_html = _rewrite_matrix_index(run_path, render_dashboard_html(run_path))
         _write_page(output / "index.html", index_html, pages, output)
         _write_artifact_pages(run_path, output, pages)
+    elif pack_review_path.exists():
+        index_html = _rewrite_pack_review_index(run_path, render_dashboard_html(run_path))
+        _write_page(output / "index.html", index_html, pages, output)
+        _write_artifact_pages(run_path, output, pages)
     else:
-        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, or matrix_report.json found in {run_path}")
+        raise FileNotFoundError(f"No report.json, evolution.json, lift_report.json, matrix_report.json, or pack_review_ci_result.json found in {run_path}")
 
     manifest = {
         "run_dir": str(run_path),
@@ -143,6 +148,14 @@ def _rewrite_evolution_index(html: str, evolution: dict[str, Any]) -> str:
 def _rewrite_matrix_index(run_path: Path, html: str) -> str:
     html = html.replace('href="/artifacts"', 'href="artifacts/index.html"')
     html = html.replace('href="/artifacts/matrix_report.json"', 'href="artifacts/matrix_report.json/index.html"')
+    for artifact in _iter_artifacts(run_path):
+        rel = _artifact_rel(run_path, artifact)
+        html = html.replace(f'href="/artifacts/{quote(rel, safe="/")}"', f'href="artifacts/{rel}/index.html"')
+    return html
+
+
+def _rewrite_pack_review_index(run_path: Path, html: str) -> str:
+    html = html.replace('href="/artifacts"', 'href="artifacts/index.html"')
     for artifact in _iter_artifacts(run_path):
         rel = _artifact_rel(run_path, artifact)
         html = html.replace(f'href="/artifacts/{quote(rel, safe="/")}"', f'href="artifacts/{rel}/index.html"')

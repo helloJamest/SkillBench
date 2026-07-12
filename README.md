@@ -339,7 +339,7 @@ The bundle contains `dashboard/` static HTML, `skillbench-comment.md`, `raw/` co
 
 For a complete GitHub Actions artifact template, see `.github/workflows/skillbench-bundles.yml`. It runs both `skillbench ci` and `skillbench harness-matrix`, builds report bundles, uploads `ci-report-bundle` and `matrix-report-bundle` with `actions/upload-artifact`, then fails the job only after the evidence is uploaded.
 
-For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available.
+For eval pack pull requests, see `.github/workflows/skillbench-pack-checklists.yml`. It renders `skillbench pack-checklist` Markdown and `validate-cases --json` output for every `examples/eval_packs/*.json` file, adds smoke-to-release `pack-compare` Markdown/JSON coverage drift artifacts with gate status and policy sources, renders `skillbench-pack-review-comment.md`, writes `pack_review_ci_result.json`, JUnit, and SARIF artifacts, posts or updates a sticky eval pack review PR comment, applies the right-hand pack metadata gate, uploads an `eval-pack-checklists` artifact, then fails only after the review evidence is available. Run `skillbench dashboard .skillbench/pack-checklists` or `skillbench export-dashboard .skillbench/pack-checklists --output <site>` to review the same pack evidence visually.
 
 Harness matrix runs can also act as CI gates for cross-agent utility. By default, a matrix gate passes when any selected harness meets the configured lift thresholds. Add `--require-all-pass` when every selected harness must meet them:
 
@@ -459,6 +459,7 @@ Every eval run writes:
 - `agent_runs/<case_id>/agent_audit.json` with runner name, status, elapsed time, transcript, command, files, and artifact links
 
 The dashboard reads these files directly and does not recompute scores.
+Eval pack review directories that contain `pack_review_ci_result.json` render as a dashboard with validation status, coverage drift, policy sources, gate failures, and raw artifact links.
 Case detail pages also render full-agent command, stdout, stderr, exit code, and produced file lists when `agent_runs/<case_id>/` artifacts exist.
 When a custom judge fails, the same page shows a dedicated `Judge Error` section with kind, return code, stdout, and stderr.
 Use the `Browse raw artifacts` link on the report page, or open `/artifacts`, to inspect every JSON, JSONL, TXT, and Markdown file in the run directory without leaving the dashboard.
@@ -483,7 +484,7 @@ python -m skillbench export-dashboard `
 ```
 
 Open `.skillbench\dashboard-site\index.html` to inspect the report without running a server.
-Static exports include `artifacts/index.html`, raw artifact detail pages, harness matrix pages for `matrix_report.json`, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
+Static exports include `artifacts/index.html`, raw artifact detail pages, harness matrix pages for `matrix_report.json`, eval pack review pages for `pack_review_ci_result.json`, `timeline/index.html` for evolution runs, and `comparison/index.html` when `comparison.json` exists.
 
 Package the dashboard together with PR comment text, CI outputs, and copied raw artifacts:
 

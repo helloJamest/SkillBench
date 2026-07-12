@@ -46,6 +46,9 @@ def build_pack_review_ci_result(review_dir: str | Path, *, output_path: str | Pa
                 "path": str(path),
                 "passed": bool(gate.get("passed", True)),
                 "case_delta": payload.get("case_delta"),
+                "left_eval_set_id": (payload.get("left") or {}).get("eval_set_id"),
+                "right_eval_set_id": (payload.get("right") or {}).get("eval_set_id"),
+                "policy_sources": list(gate.get("policy_sources") or []),
             }
         )
         left = (payload.get("left") or {}).get("eval_set_id", "-")
