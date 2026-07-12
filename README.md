@@ -223,10 +223,12 @@ python -m skillbench harness-matrix `
   --min-total-lift 0.1 `
   --min-mean-case-lift 0.05 `
   --require-all-pass `
+  --junit .skillbench\reports\matrix-junit.xml `
+  --sarif .skillbench\reports\matrix.sarif `
   --json
 ```
 
-The command writes `gate` into `matrix_report.json` with `passed`, `thresholds`, `passing_harnesses`, and `failures`, and exits non-zero when the gate fails. When `--harness-cost runner=usd` is supplied, the same report includes cost-normalized lift metrics.
+The command writes `gate` into `matrix_report.json` with `passed`, `thresholds`, `passing_harnesses`, and `failures`, writes `matrix_ci_result.json`, and exits non-zero when the gate fails. Use `--junit` and `--sarif` to emit uploadable matrix gate artifacts for CI systems. When `--harness-cost runner=usd` is supplied, the same report includes cost-normalized lift metrics.
 
 ## Skill Lift A/B Evaluation
 
@@ -312,6 +314,7 @@ Every eval run writes:
 - `summary.md`
 - `lift_report.json` for `skillbench lift` A/B runs
 - `matrix_report.json` for `skillbench harness-matrix` cross-harness lift runs
+- `matrix_ci_result.json` for `skillbench harness-matrix` CI gates
 - `timeline.json` for `skillbench evo` runs
 - `judge/<case_id>.input.json`
 - `judge/<case_id>.output.json`

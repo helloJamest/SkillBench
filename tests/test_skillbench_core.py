@@ -1412,6 +1412,44 @@ def test_harness_matrix_cli_returns_nonzero_for_failed_gate(tmp_path, capsys):
     assert data["gate"]["failures"][0]["type"] == "total_lift"
 
 
+def test_harness_matrix_cli_writes_junit_and_sarif_for_failed_gate(tmp_path, capsys):
+    junit_path = tmp_path / "matrix-junit.xml"
+    sarif_path = tmp_path / "matrix.sarif"
+    exit_code = skillbench_main(
+        [
+            "harness-matrix",
+            str(SAMPLE_SKILL),
+            "--eval-set",
+            str(EVAL_SET),
+            "--output-dir",
+            str(tmp_path / "matrix"),
+            "--harness",
+            "custom-command",
+            "--min-total-lift",
+            "99",
+            "--require-all-pass",
+            "--junit",
+            str(junit_path),
+            "--sarif",
+            str(sarif_path),
+            "--json",
+        ]
+    )
+
+    data = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert junit_path.exists()
+    assert sarif_path.exists()
+    assert "failures=\"1\"" in junit_path.read_text(encoding="utf-8")
+    sarif = json.loads(sarif_path.read_text(encoding="utf-8"))
+    assert sarif["version"] == "2.1.0"
+    assert sarif["runs"][0]["results"][0]["ruleId"] == "skillbench.total_lift"
+    assert sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"].endswith("matrix_report.json")
+    assert Path(data["artifacts"]["matrix_ci_result_json"]).exists()
+    assert data["artifacts"]["junit_xml"] == str(junit_path)
+    assert data["artifacts"]["sarif_json"] == str(sarif_path)
+
+
 def test_dashboard_renders_harness_matrix_report(tmp_path):
     result = run_harness_matrix(
         SAMPLE_SKILL,

@@ -13,7 +13,16 @@ from .evaluate_skill import run_evaluation
 from .lift import run_lift
 from .matrix import run_harness_matrix
 from .observability.logging_io import read_json, resolve_run_dir
-from .reports import build_ci_result, build_comparison, write_ci_result, write_comparison, write_junit_xml, write_sarif_report
+from .reports import (
+    build_ci_result,
+    build_comparison,
+    build_harness_matrix_ci_result,
+    write_ci_result,
+    write_comparison,
+    write_harness_matrix_report,
+    write_junit_xml,
+    write_sarif_report,
+)
 from .runners import AGENT_RUNNERS
 
 
@@ -97,6 +106,8 @@ def build_parser() -> argparse.ArgumentParser:
     matrix_parser.add_argument("--judge-command", default=None)
     matrix_parser.add_argument("--agent-command", default=None)
     matrix_parser.add_argument("--agent-timeout", type=float, help="Full-agent command timeout in seconds.")
+    matrix_parser.add_argument("--junit", help="Write JUnit XML for the matrix gate to this path.")
+    matrix_parser.add_argument("--sarif", help="Write SARIF 2.1.0 output for the matrix gate to this path.")
     matrix_parser.add_argument("--json", action="store_true")
     _add_case_selection_args(matrix_parser)
 
@@ -298,6 +309,18 @@ def main(argv: list[str] | None = None) -> int:
             require_all_pass=args.require_all_pass,
             **_case_selection_kwargs(args),
         )
+        matrix_report_path = Path(result["artifacts"]["matrix_report_json"])
+        matrix_ci_result = build_harness_matrix_ci_result(result)
+        matrix_ci_path = matrix_report_path.parent / "matrix_ci_result.json"
+        write_ci_result(matrix_ci_result, matrix_ci_path)
+        result["artifacts"]["matrix_ci_result_json"] = str(matrix_ci_path)
+        if args.junit:
+            write_junit_xml(matrix_ci_result, args.junit)
+            result["artifacts"]["junit_xml"] = str(Path(args.junit))
+        if args.sarif:
+            write_sarif_report(matrix_ci_result, args.sarif)
+            result["artifacts"]["sarif_json"] = str(Path(args.sarif))
+        write_harness_matrix_report(result, matrix_report_path)
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
         else:

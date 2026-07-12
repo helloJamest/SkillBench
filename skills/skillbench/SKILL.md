@@ -29,9 +29,10 @@ Use the SkillBench runtime to evaluate and evolve Codex skills.
 5. Preserve all generated artifacts under `.skillbench/runs/` unless the user asks for another output directory.
 6. For focused checks, pass case selection filters to `eval`, `ci`, `lift`, `harness-matrix`, or `evo`: `--case-id`, `--include-tag`, `--exclude-tag`, `--case-mode`, and `--limit`.
 7. If a full-agent case times out, inspect the recorded `agent_runs/<case_id>/` artifacts; SkillBench records the timeout as evidence instead of treating it as a framework crash.
-8. For cross-harness CI checks, pass `--min-total-lift`, `--min-mean-case-lift`, and optionally `--require-all-pass` to `harness-matrix`; inspect `matrix_report.json.gate` when it exits non-zero.
+8. For cross-harness CI checks, pass `--min-total-lift`, `--min-mean-case-lift`, and optionally `--require-all-pass` to `harness-matrix`; inspect `matrix_report.json.gate` and `matrix_ci_result.json` when it exits non-zero.
 9. For cost-normalized comparisons, pass `--harness-cost runner=usd`; inspect `matrix_report.json.harnesses[].efficiency`, `latency`, `confidence_summary`, and top-level `efficiency_ranking`.
-10. If `custom-command` judge output fails, inspect `evidence.judge_error` in the case result and the persisted judge input/output artifacts.
+10. For matrix gate artifacts, pass `--junit <path>` and `--sarif <path>` to `harness-matrix`.
+11. If `custom-command` judge output fails, inspect `evidence.judge_error` in the case result and the persisted judge input/output artifacts.
 
 ## Runtime
 
@@ -46,6 +47,7 @@ PYTHONPATH=plugins/skillbench/runtime python -m skillbench report .skillbench/ru
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench lift <path-to-SKILL.md> --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench harness-matrix <path-to-SKILL.md> --harness custom-command --harness codex-cli --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench harness-matrix <path-to-SKILL.md> --harness custom-command --harness-cost custom-command=0.02 --min-total-lift 0.1 --require-all-pass
+PYTHONPATH=plugins/skillbench/runtime python -m skillbench harness-matrix <path-to-SKILL.md> --harness custom-command --min-total-lift 0.1 --junit .skillbench/matrix-junit.xml --sarif .skillbench/matrix.sarif
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench evo <path-to-SKILL.md> --rounds 3
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench calibrate <path-to-SKILL.md> --samples 3 --json
 PYTHONPATH=plugins/skillbench/runtime python -m skillbench benchmark --json
@@ -72,6 +74,7 @@ Every eval/evo run should produce:
 - candidate snapshots
 - `lift_report.json` for `lift` runs, rendered in the dashboard and exported as static HTML
 - `matrix_report.json` for `harness-matrix` runs, including `gate`, `confidence_summary`, `latency`, and `efficiency` results, rendered in the dashboard and exported as static HTML
+- `matrix_ci_result.json` for `harness-matrix` gates, plus optional matrix JUnit and SARIF artifacts
 - `timeline.json` for `evo` runs, rendered at `/timeline` and exported as `timeline/index.html`
 - normalized `agent_audit.json` for each full-agent case
 - optional `reflection.json` and mutation records

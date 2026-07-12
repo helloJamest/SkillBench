@@ -87,6 +87,30 @@ def build_harness_matrix_gate(
     }
 
 
+def build_harness_matrix_ci_result(report: dict[str, Any]) -> dict[str, Any]:
+    gate = report.get("gate") or {}
+    best = (report.get("ranking") or [{}])[0]
+    artifacts = report.get("artifacts") or {}
+    return {
+        "passed": bool(gate.get("passed")),
+        "total_score": best.get("total_lift"),
+        "safety_score": None,
+        "thresholds": gate.get("thresholds", {}),
+        "failures": list(gate.get("failures", [])),
+        "report_path": artifacts.get("matrix_report_json", "matrix_report.json"),
+        "worst_case_id": None,
+        "baseline": None,
+        "regression": None,
+        "matrix": {
+            "run_id": report.get("run_id"),
+            "best_harness": report.get("best_harness"),
+            "mode": gate.get("mode"),
+            "passing_harnesses": gate.get("passing_harnesses", []),
+            "harness_count": report.get("harness_count", 0),
+        },
+    }
+
+
 def write_harness_matrix_report(report: dict[str, Any], path: str | Path) -> Path:
     return write_json(path, report)
 

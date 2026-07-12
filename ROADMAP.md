@@ -36,4 +36,5 @@ SkillBench is moving from a working MVP toward a trustworthy, reproducible Agent
 - v0.5.0 shipped top-level `matrix_report.json`, harness ranking, best-harness selection, dashboard rendering, and static dashboard export for cross-harness lift evidence.
 - v0.5.1 shipped matrix CI gates with `--min-total-lift`, `--min-mean-case-lift`, `--require-all-pass`, persisted `gate` results, dashboard gate rendering, and non-zero CLI exits for failed gates.
 - v0.5.2 shipped `--harness-cost`, per-harness confidence summaries, latency summaries from full-agent evidence, efficiency metrics, `efficiency_ranking`, and dashboard efficiency rendering.
-- Next: add matrix CI artifacts for JUnit/SARIF and richer PR comments.
+- v0.5.3 shipped matrix CI artifacts with `matrix_ci_result.json`, `--junit`, and `--sarif` for harness matrix gates.
+- Next: add richer GitHub PR comments for matrix gate, lift, and efficiency summaries.
